@@ -95,22 +95,37 @@ Link Source Code : http://thecodeplayer.com/walkthrough/matrix-rain-animation-ht
         c.height = window.innerHeight;
         c.width = window.innerWidth;
 
-        //chinese characters - taken from the unicode charset
-        //var matrix = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%";
+        var matrix = [
+            "اآبپتثجچحخدذرزژسشصضطظعغقکگلمنوهی", // abjad
+            "੧੨੩੪੫੬੭੮੯੦ੳਅਰਤਯਪਸਦਗਹਜਕਲਙੜਚਵਬਨਮੲਥਫਸ਼ਧਘਝਖਲ਼ੜ੍ਹਛਭਣ", // gurmukhi
+            "१२३४५६७८९अरतयपसदगहजकलङषचवबनमआथय़फशधघझखळक्षछभणऒ", // sanskrit
+            "田由甲申甴电甶男甸甹町画甼甽甾甿畀畁畂畃畄畅畆畇畈畉畊畋界畍畎畏畐畑呂", // hanzi
+            "クタハムヰアケチヒモヲィコッャンイツヤウゥサフュヵテユヶェショワエトヘヨ", // katakana
+            "ォスラヱオナリカセニホル・ヌレーキソネロヽノマヮミ", // katakana
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZÜÄÖßÆŒØÅ", // latin
+            "ⱯⱭⱰꞴↃꞳÐꝹƎƏƐꞫꞬƔƢꜦꞰꟿŊƆꞶꞂƦꞄꝜƱǷȜƸ", // latin
+            "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ", // cryllic
+            "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ", // greek
+            "אבגדהוזחטיכךלמםנןסעפףצץקרשת", // hebrew
+            "ԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖև", // armenian
+            "ႠႡႢႣႤႥႦႧႨႩႪႫႬႭႮႯႰႱႲႳႴႵႶႷႸႹႺႻႼႽႾႿჀჁჂჃჄჅჇჍ", // georgian
+            "กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรฤลฦวศษสหฬอฮฯ", // thai
+            "ඛඝඞඡඣඤඨඪථධනඵභශෂෆ", // sinhala
+            "ހށނރބޅކއވމފދތލގޏ ސޑޒޓޔޕޖޗޘޙޚޛޜޝޞޟޠޡޢޣޤޥ", // thaana
+            "ᎠᎡᎢᎣᎤᎥᎦᎧᎨᎩᎪᎫᎬᎭᎮᎯᎰᎱᎲᎳᎴᎵᎶᎷᎸᎹᎺᎻᎼᎽᎾᎿᏀᏁᏂᏃᏄᏅᏆ", // cherokee
+            "ᏇᏈᏉᏊᏋᏌᏍᏎᏏᏐᏑᏒᏓᏔᏕᏖᏗᏘᏙᏚᏛᏜᏝᏞᏟᏠᏡᏢᏣᏤᏥᏦᏧᏨᏩᏪᏫᏬᏭᏮᏯᏰᏱᏲᏳᏴᏵ", // cherokee
+            "유니코드문자가너무많은임의한국어텍스트조선글", // hangul
+            "!@#%^&*()_+-=~`×÷\"\'\\/?.,><", // signs
+            "1234567890", // arabic_num
+            "۱۲۳۴۵۶۷۸۹۰٤٥٦", // persian_num
+            "一二三四有五六有八八九十零", // suzhou_num
+            "๑๒๓๔๕๖๗๘๙๐", // thai_num
+            "௧௨௩௪௫௬௭௮௯௰௦", // tamil_num
+        ];
 
-        var abjad = "اآبپتثجچحخدذرزژسشصضطظعغقکگلمنوهی"
-        var gurmukhi = "੧੨੩੪੫੬੭੮੯੦ੳਅਰਤਯਪਸਦਗਹਜਕਲਙੜਚਵਬਨਮੲਥਫਸ਼ਧਘਝਖਲ਼ੜ੍ਹਛਭਣ"
-        var sanskrit = "१२३४५६७८९अरतयपसदगहजकलङषचवबनमआथय़फशधघझखळक्षछभणऒ"
-        var hanzi = "田由甲申甴电甶男甸甹町画甼甽甾甿畀畁畂畃畄畅畆畇畈畉畊畋界畍畎畏畐畑呂"
-        var katakana = "゠クタハムヰアケチヒモヲィコッャンイツヤウゥサフュヵテユヶェショワエトヘヨォスラヱオナリカセニホル・ヌレーキソネロヽノマヮミ"
-        var latin = "ABCDEFGHIJKLMNOPQRSTUVWXYZÜÄÖßÆØÅ"
-        var cryllic = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
-        var greek = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
-        var hebrew = "אבגדהוזחטיכךלמםנןסעפףצץקרשת"
-        var numbers = "1234567890۱۲۳۴۵۶۷۸۹۰一二三四有五六有八八九十零"
-        var signs = "!@#%^&*()_+-=~`×÷\"\'\\/?.,><"
+        //converting the array into a string
+        var matrix = matrix.join("");
 
-        var matrix = abjad + gurmukhi + sanskrit + hanzi + katakana + latin + cryllic + greek + hebrew + numbers + signs;
         //converting the string into an array of single characters
         matrix = matrix.split("");
 
@@ -131,7 +146,7 @@ Link Source Code : http://thecodeplayer.com/walkthrough/matrix-rain-animation-ht
             ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
             ctx.fillRect(0, 0, c.width, c.height);
 
-            ctx.fillStyle = "#FFF"; //green text
+            ctx.fillStyle = "white"; //color of the text
             ctx.font = font_size + "px monospace";
             //looping over drops
             for( var i = 0; i < drops.length; i++ )
