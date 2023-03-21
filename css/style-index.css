@@ -4,7 +4,7 @@
 }
 
 :root {
-    font-size: 18px;
+    font-size: 16px;
     font-family: 'Share Tech Mono', monospace;
 }
 
@@ -17,18 +17,21 @@ body {
 }
 
 h1 {
-    font-size: 4rem;
-    padding-bottom: 1rem;
+    font-size: 3rem;
+    margin-bottom: 1rem;
 }
 
 li {
     font-size: 2rem;
     list-style-type: none;
-    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    background-color: white;
+    padding: 1%;
 }
 
-a {
-    color: rgb(120, 220, 255);
+li a {
+    color: black;
+    text-decoration: none;
 }
 
 .center {
@@ -38,9 +41,24 @@ a {
     transform: translate(-50%, -50%)
 }
 
+.info {
+    color: gray;
+    font-size: 2rem;
+    font-family: 'Share Tech Mono', monospace;
+    position: absolute;
+    bottom: 2vw;
+    right: 2vw;
+    z-index : 1;
+}
+
+.info a {
+    color: gray;
+    text-decoration: none;
+}
+
 @media only screen and (max-width: 600px) {
     :root {
-        font-size: 20px;
+        font-size: 10px;
     }
 }
 
