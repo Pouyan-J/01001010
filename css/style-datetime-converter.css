@@ -1,0 +1,71 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    font-size: 20px;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+body {
+    font-family: 'Share Tech Mono', monospace;
+    color: white;
+    background-color: black;
+    margin: 0;
+    padding: 0;
+}
+
+::-moz-selection {
+    color: black;
+    background: white;
+}
+
+::selection {
+    color: black;
+    background: white;
+}
+
+#wrapper {
+    width: 90%;
+    margin: 0 auto;
+    margin-top: 5vw;
+}
+
+h1 {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+}
+
+h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+p {
+    margin-bottom: 1rem;
+}
+
+a {
+    color: white;
+}
+
+hr {
+    border: 1px solid gray;
+}
+
+input {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1rem;
+    background-color: black;
+    color: white;
+    border: 1px solid white;
+    padding-left: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+@media only screen and (max-width: 600px) {
+    :root {
+        font-size: 18px;
+    }
+}

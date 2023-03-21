@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P74 Datetime Converter</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style-datetime-converter.css" />
+    <link rel="icon" href="icon.ico" />
+
+    <script type="text/javascript" src="scripts/DecimalTime.js"></script>
+    <script type="text/javascript" src="scripts/PersianDate.js"></script>
+    <script type="text/javascript" src="scripts/DecimalTimeConvertUtil.js" defer></script>
+    <script type="text/javascript" src="scripts/PersianDateConvertUtil.js" defer></script>
+</head>
+
+<body>
+    <div id="wrapper">
+        <h1>P74 Datetime</h1>
+
+        <article>
+            <h2>Current time</h2>
+            <p>
+                Decimal time: <span id="decimal-hour">00:00:00</span><br>
+                Regular time: <span id="regular-hour">00:00:00</span>
+            </p>
+        </article>
+        <article>
+            <h2>Current date</h2>
+            <p>
+                JH calendar: <span id="jh-calendar"></span> JH<br>
+                Pe calendar: &nbsp;<span id="persian-calendar"></span> SH<br>
+                Gr calendar: &nbsp;<span id="gregorian-calendar"></span> CE
+            </p>
+        </article>
+
+        <article>
+            <h2>Datetime converter</h2>
+            <p>
+                <input type="date" name="date picker" id="date-picker" min="0622-03-21"> <span id="convertor"></span>
+            </p>
+
+            <p>
+                <input type="time" step="1" name="time picker" id="time-picker"> <span id="time-convertor"></span>
+            </p>
+        </article>
+
+        <p style="text-align: right; margin-top: 1rem;">
+            <a href="datetime.html">Digital Decimal Clock</a><br>
+            Created by <a href="https://p74.ir" target="_blank">Pouyan</a>
+        </p>
+    </div>
+</body>
+
+</html>

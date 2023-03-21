@@ -1,172 +1,30 @@
-<!--
-Original code : @thecodeplayer, 
-Link Source Code : http://thecodeplayer.com/walkthrough/matrix-rain-animation-html5-canvas-javascript
--->
-<html>
-    <head>
-		<title>01001010</title>
-		<link rel="icon" href="icon.ico" />
-		<meta charset="UTF-8">
-		<meta name="description" content="Multilingual Matrix Rain">
-		<meta name="keywords" content="matrix">
-        <style>
-            /*basic reset */
-            *{
-                margin: 0;
-                padding: 0;
-            }
-            
-            /* Page settings */
-            html {
-                width: 100%;
-                height: 100%;
-                background: radial-gradient(circle, #fff 0%, #aaa 100%) no-repeat;
-                overflow-x: hidden;
-                overflow-y: hidden;
-            }
-            body {
-                text-align: center;
-                display: table;
-                background: black;
-                width: 100%;
-                height: 100%;
-                overflow-x: hidden;
-                overflow-y: hidden;
-            }
+<!DOCTYPE html>
+<html lang="en">
 
-            canvas {display:block;}
-            
-            #author {
-                position: absolute;
-                bottom: 10px;
-                left: 10px;
-                color : white;
-                z-index : 1;
-                box-sizing: border-box;
-                vertical-align: middle;
-            }
-        
-            span {
-                font-family: monospace;
-                font-size: 1.5em;
-                background-color: black;
-            }
-            span:after {
-                content:"|";
-                opacity: 0;
-                animation: cursor 1s infinite;
-            }
-            @keyframes cursor {
-                0% {
-                    opacity: 0;
-                }
-                40% {
-                    opacity: 0;
-                }
-                50% {
-                    opacity: 1;
-                }
-                90% {
-                    opacity: 1;
-                }
-                100% {
-                    opacity: 0;
-                }
-            }
-            a:link,
-            a:visited {
-                color: white;
-                text-decoration: none;
-            }
-        
-        </style>
-    </head>
-    <body>
-    
-        <canvas id="c"></canvas>
-        <a href="https://p74.ir" target="_blank"><span id = "author"><strong>neo@matrix:~$</strong> ssh viewer@p74.ir</a></span></a>
-        
-        <script>
-        // geting canvas by id c
-        var c = document.getElementById("c");
-        var ctx = c.getContext("2d");
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P74 Datetime</title>
 
-        //making the canvas full screen
-        c.height = window.innerHeight;
-        c.width = window.innerWidth;
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
-        var matrix = [
-            "اآبپتثجچحخدذرزژسشصضطظعغقکگلمنوهی", // abjad
-            "੧੨੩੪੫੬੭੮੯੦ੳਅਰਤਯਪਸਦਗਹਜਕਲਙੜਚਵਬਨਮੲਥਫਸ਼ਧਘਝਖਲ਼ੜ੍ਹਛਭਣ", // gurmukhi
-            "१२३४५६७८९अरतयपसदगहजकलङषचवबनमआथय़फशधघझखळक्षछभणऒ", // sanskrit
-            "田由甲申甴电甶男甸甹町画甼甽甾甿畀畁畂畃畄畅畆畇畈畉畊畋界畍畎畏畐畑呂", // hanzi
-            "クタハムヰアケチヒモヲィコッャンイツヤウゥサフュヵテユヶェショワエトヘヨ", // katakana
-            "ォスラヱオナリカセニホル・ヌレーキソネロヽノマヮミ", // katakana
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZÜÄÖßÆŒØÅ", // latin
-            "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ", // cryllic
-            "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ", // greek
-            "אבגדהוזחטיכךלמםנןסעפףצץקרשת", // hebrew
-            "ԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖև", // armenian
-            "ႠႡႢႣႤႥႦႧႨႩႪႫႬႭႮႯႰႱႲႳႴႵႶႷႸႹႺႻႼႽႾႿჀჁჂჃჄჅჇჍ", // georgian
-            "กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรฤลฦวศษสหฬอฮฯ", // thai
-            "ඛඝඞඡඣඤඨඪථධනඵභශෂෆ", // sinhala
-            "ހށނރބޅކއވމފދތލގޏ ސޑޒޓޔޕޖޗޘޙޚޛޜޝޞޟޠޡޢޣޤޥ", // thaana
-            "ᎠᎡᎢᎣᎤᎥᎦᎧᎨᎩᎪᎫᎬᎭᎮᎯᎰᎱᎲᎳᎴᎵᎶᎷᎸᎹᎺᎻᎼᎽᎾᎿᏀᏁᏂᏃᏄᏅᏆ", // cherokee
-            "ᏇᏈᏉᏊᏋᏌᏍᏎᏏᏐᏑᏒᏓᏔᏕᏖᏗᏘᏙᏚᏛᏜᏝᏞᏟᏠᏡᏢᏣᏤᏥᏦᏧᏨᏩᏪᏫᏬᏭᏮᏯᏰᏱᏲᏳᏴᏵ", // cherokee
-            "유니코드문자가너무많은임의한국어텍스트조선글", // hangul
-            "!@#%^&*()_+-=~`×÷\"\'\\/?.,><", // signs
-            "1234567890", // arabic_num
-            "۱۲۳۴۵۶۷۸۹۰٤٥٦", // persian_num
-            "一二三四有五六有八八九十零", // suzhou_num
-            "๑๒๓๔๕๖๗๘๙๐", // thai_num
-            "௧௨௩௪௫௬௭௮௯௰௦", // tamil_num
-        ];
+    <link rel="stylesheet" href="css/style-index.css" />
+    <link rel="icon" href="icon.ico" />
+</head>
 
-        //converting the array into a string
-        var matrix = matrix.join("");
+<body>
+    <div class="center">
+        <h1>P74 Geeky Tools</h1>
+        <ul>
+            <li><a href="matrix.html">Polylingual Matrix Rain</a></li>
+            <li><a href="datetime.html">Decimal Clock & JH Date</a></li>
+            <li><a href="datetime-converter.html">Decimal Clock & JH Date Converter</a></li>
+        </ul>
+    </div>
+    </div>
+</body>
 
-        //converting the string into an array of single characters
-        matrix = matrix.split("");
-
-        var font_size = 15;
-        var columns = c.width / font_size; //number of columns for the rain
-        //an array of drops - one per column
-        var drops = [];
-        //x below is the x coordinate
-        //1 = y co-ordinate of the drop(same for every drop initially)
-        for(var x = 0; x < columns; x++)
-            drops[x] = 1; 
-
-        //drawing the characters
-        function draw()
-        {
-            //Black BG for the canvas
-            //translucent BG to show trail
-            ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
-            ctx.fillRect(0, 0, c.width, c.height);
-
-            ctx.fillStyle = "white"; //color of the text
-            ctx.font = font_size + "px monospace";
-            //looping over drops
-            for( var i = 0; i < drops.length; i++ )
-            {
-                //a random chinese character to print
-                var text = matrix[ Math.floor( Math.random() * matrix.length ) ];
-                //x = i*font_size, y = value of drops[i]*font_size
-                ctx.fillText(text, i * font_size, drops[i] * font_size);
-
-                //sending the drop back to the top randomly after it has crossed the screen
-                //adding a randomness to the reset to make the drops scattered on the Y axis
-                if( drops[i] * font_size > c.height && Math.random() > 0.975 )
-                    drops[i] = 0;
-
-                //incrementing Y coordinate
-                drops[i]++;
-            }
-        }
-
-        setInterval( draw, 35 );
-
-        </script>
-    </body>
 </html>
