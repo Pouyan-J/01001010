@@ -4,6 +4,9 @@ function updateDate() {
     let jh = date_formatter(to_persian_date_array(new Date()), 11180);
     document.getElementById("jh-calendar").innerHTML = jh;
 
+    let pe = date_formatter(to_persian_date_array(new Date()), 1180);
+    document.getElementById("pe-calendar").innerHTML = pe;
+
     let persian_date = date_formatter(to_persian_date_array(new Date()), 0);
     document.getElementById("persian-calendar").innerHTML = persian_date;
 
