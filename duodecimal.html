@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base 12 Converter</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <link rel="icon" href="icon.ico" />
+
+    <link rel="stylesheet" href="css/style-duodecimal.css" />
+
+    <script src="scripts/Duodecimal.js"></script>
+    <script src="scripts/DuodecimalUtil.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Duodecimal Converter</h1>
+        <div class="input-group">
+            <label for="decimal-input">Decimal (Base 10)</label>
+            <input type="number" id="decimal-input" placeholder="Enter decimal number" oninput="updateDuodecimal()">
+        </div>
+        <div class="input-group">
+            <label for="duodecimal-input">Duodecimal (Base 12)</label>
+            <input type="text" id="duodecimal-input" placeholder="Enter duodecimal number" oninput="updateDecimal()">
+        </div>
+    </div>
+
+    <div class="info">
+        <p>Created by: <a href="https://p74.ir">Pouyan</a></p>
+        <p>More info: <a href="https://dozenal.org/index.html">dozenal.org</a></p>
+    </div>
+</body>
+
+</html>
