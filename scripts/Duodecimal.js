@@ -3,8 +3,8 @@
 const dec_chars = ['A', 'a', 'T', 't', 'X', 'x', 'δ', 'τ', 'W', 'w', '*', '↊'];
 const elf_chars = ['B', 'b', 'E', 'e', 'Z', 'z', 'ε', '∂', '#', '↋'];
 
-const dec = 'A';
-const elf = 'B';
+const dec = 'X';
+const elf = 'E';
 
 function decimalToDuodecimal(num) {
     if (isNaN(num)) return null;
