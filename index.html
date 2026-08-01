@@ -2,30 +2,804 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>01001010</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P74 Tools · terminal</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="css/style-index.css" />
-    <link rel="icon" href="icon.ico" />
+    <style>
+        /* ── reset & base ── */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            font-size: 16px;
+            --bg: #000000;
+            --fg: #f0f0f0;
+            --dim: #666666;
+            --prompt: #33ff33;
+            --border: #222222;
+            --dot-red: #ff5f56;
+            --dot-yellow: #ffbd2e;
+            --dot-green: #27c93f;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Share Tech Mono', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2vw;
+            margin: 0;
+        }
+
+        /* ── terminal window ── */
+        .terminal {
+            width: 100%;
+            max-width: 840px;
+            height: 90vh;
+            max-height: 700px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(255, 255, 255, 0.02);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── title bar ── */
+        .titlebar {
+            display: flex;
+            align-items: center;
+            padding: 0.7rem 1.2rem;
+            background: #0a0a0a;
+            border-bottom: 1px solid var(--border);
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .titlebar .label {
+            font-size: 0.8rem;
+            color: var(--dim);
+            letter-spacing: 0.04em;
+            opacity: 0.7;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .dots {
+            display: flex;
+            gap: 0.55rem;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .dot {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            display: block;
+            flex-shrink: 0;
+        }
+        .dot.red {
+            background: var(--dot-red);
+        }
+        .dot.yellow {
+            background: var(--dot-yellow);
+        }
+        .dot.green {
+            background: var(--dot-green);
+        }
+
+        /* ── output area ── */
+        .output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 1.5rem 0.2rem 1.5rem;
+            background: var(--bg);
+            font-size: 1rem;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        .output::-webkit-scrollbar {
+            width: 6px;
+        }
+        .output::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .output::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        .output::-webkit-scrollbar-thumb:hover {
+            background: var(--dim);
+        }
+
+        /* ── sticky header (always visible) ── */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 2;
+            padding: 0.6rem 0 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.8rem;
+        }
+
+        .sticky-header .title {
+            font-size: 1.8rem;
+            color: var(--fg);
+        }
+        .sticky-header .title span {
+            color: var(--prompt);
+        }
+        .sticky-header .hint {
+            color: var(--dim);
+            font-size: 0.85rem;
+            margin-top: 0.4rem;
+            opacity: 0.6;
+        }
+
+        .sticky-header .cmd-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem 1.8rem;
+            margin-top: 0.7rem;
+            padding: 0.3rem 0;
+        }
+
+        .sticky-header .cmd-grid a {
+            color: var(--fg);
+            text-decoration: none;
+            font-size: 1rem;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .sticky-header .cmd-grid a .prompt-symbol {
+            color: var(--prompt);
+            font-weight: 400;
+        }
+
+        .sticky-header .cmd-grid a:hover {
+            color: var(--prompt);
+        }
+
+        .sticky-header .cmd-grid a .cmd-name {
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .sticky-header .cmd-grid a:hover .cmd-name {
+            border-bottom-color: var(--prompt);
+        }
+
+        .sticky-header .cmd-grid a .cmd-desc {
+            color: var(--dim);
+            font-size: 0.8rem;
+            margin-left: 0.3rem;
+        }
+        .sticky-header .cmd-grid a:hover .cmd-desc {
+            color: var(--dim);
+        }
+
+        /* ── dynamic lines ── */
+        .output .line {
+            white-space: pre-wrap;
+            word-break: break-word;
+            padding: 0.05rem 0;
+        }
+
+        .output .line.prompt-line {
+            color: var(--fg);
+        }
+
+        .output .line.prompt-line .prompt-symbol {
+            color: var(--prompt);
+        }
+
+        .output .line.output-line {
+            color: var(--fg);
+            padding-left: 0.5rem;
+        }
+
+        .output .line.output-line.dim {
+            color: var(--dim);
+        }
+
+        .output .line.output-line.error {
+            color: #ff6b6b;
+        }
+
+        .output .line.output-line.success {
+            color: var(--prompt);
+        }
+
+        .output .line.output-line.help {
+            color: var(--fg);
+        }
+
+        .output .line.output-line.help .cmd-name {
+            color: #66d9ff;
+        }
+
+        .output .line.output-line.help .cmd-desc {
+            color: var(--dim);
+        }
+
+        /* ── input line ── */
+        .input-line {
+            display: flex;
+            align-items: center;
+            padding: 0.6rem 1.5rem 1.2rem 1.5rem;
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            gap: 0.6rem;
+        }
+
+        .input-line .prompt {
+            color: var(--prompt);
+            font-size: 1rem;
+            font-family: 'Share Tech Mono', monospace;
+            flex-shrink: 0;
+        }
+
+        .input-line #command-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--fg);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            padding: 0.1rem 0;
+            caret-color: var(--prompt);
+            min-width: 0;
+        }
+
+        .input-line #command-input::selection {
+            background: rgba(51, 255, 51, 0.25);
+        }
+
+        /* ── responsive ── */
+        @media (max-width: 640px) {
+            :root {
+                font-size: 14px;
+            }
+            .terminal {
+                max-height: 95vh;
+                height: 95vh;
+                border-radius: 8px;
+            }
+            .output {
+                padding: 0.3rem 1rem 0.2rem 1rem;
+            }
+            .input-line {
+                padding: 0.4rem 1rem 0.8rem 1rem;
+            }
+            .titlebar {
+                padding: 0.5rem 0.8rem;
+            }
+            .dot {
+                width: 10px;
+                height: 10px;
+            }
+            .titlebar .label {
+                font-size: 0.65rem;
+            }
+            .sticky-header .title {
+                font-size: 1.4rem;
+            }
+            .sticky-header .cmd-grid {
+                gap: 0.4rem 1rem;
+            }
+            .sticky-header .cmd-grid a {
+                font-size: 0.9rem;
+            }
+            .sticky-header .cmd-grid a .cmd-desc {
+                display: none;
+            }
+        }
+
+        @media (max-width: 400px) {
+            :root {
+                font-size: 12px;
+            }
+            .output {
+                padding: 0.2rem 0.6rem 0.2rem 0.6rem;
+            }
+            .input-line {
+                padding: 0.3rem 0.6rem 0.6rem 0.6rem;
+            }
+            .sticky-header .title {
+                font-size: 1.2rem;
+            }
+            .sticky-header .cmd-grid a {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 1rem;
+            }
+            .terminal {
+                border-color: #ccc;
+                box-shadow: none;
+                height: auto;
+                max-height: none;
+                border-radius: 4px;
+            }
+            .titlebar {
+                background: #eee;
+                border-color: #ccc;
+            }
+            .titlebar .label {
+                color: #555;
+            }
+            .dot {
+                border: 1px solid #999;
+                background: #ccc !important;
+            }
+            .output {
+                background: white;
+                color: black;
+                overflow: visible;
+                padding: 1rem;
+            }
+            .sticky-header {
+                background: white;
+                border-color: #ccc;
+            }
+            .sticky-header .title {
+                color: black;
+            }
+            .sticky-header .title span {
+                color: #006600;
+            }
+            .sticky-header .hint {
+                color: #555;
+            }
+            .sticky-header .cmd-grid a {
+                color: black;
+            }
+            .sticky-header .cmd-grid a .prompt-symbol {
+                color: #006600;
+            }
+            .sticky-header .cmd-grid a .cmd-desc {
+                color: #555;
+            }
+            .sticky-header .cmd-grid a:hover .cmd-name {
+                border-bottom-color: #006600;
+            }
+            .output .line {
+                color: black !important;
+            }
+            .output .line.prompt-line .prompt-symbol {
+                color: #006600 !important;
+            }
+            .output .line.output-line.dim {
+                color: #555 !important;
+            }
+            .output .line.output-line.error {
+                color: #cc0000 !important;
+            }
+            .output .line.output-line.success {
+                color: #006600 !important;
+            }
+            .output .line.output-line.help .cmd-name {
+                color: #0055aa !important;
+            }
+            .output .line.output-line.help .cmd-desc {
+                color: #555 !important;
+            }
+            .input-line {
+                border-color: #ccc;
+                background: white;
+                padding: 0.5rem 1rem;
+            }
+            .input-line .prompt {
+                color: #006600 !important;
+            }
+            .input-line #command-input {
+                color: black;
+                caret-color: black;
+            }
+            .input-line #command-input::selection {
+                background: #ccc;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <div class="center">
-        <h1>P74 Tools</h1>
-        <ul>
-            <li><a href="matrix.html">Polylingual Matrix Rain</a></li>
-            <li><a href="datetime.html">Decimal Clock</a></li>
-            <li><a href="datetime-converter.html">Datetime Converter</a></li>
-            <li><a href="duodecimal.html">Duodecimal Converter</a></li>
-        </ul>
+
+    <div class="terminal">
+
+        <!-- title bar -->
+        <div class="titlebar">
+            <span class="label">terminal — p74-tools</span>
+            <span class="dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+            </span>
+        </div>
+
+        <!-- output -->
+        <div class="output" id="output"></div>
+
+        <!-- input line -->
+        <div class="input-line">
+            <span class="prompt">$</span>
+            <input type="text" id="command-input" autofocus autocomplete="off" spellcheck="false" />
+        </div>
+
     </div>
-    <div class="info"><a href="https://p74.ir">P74</a></div>
+
+    <script>
+        (function() {
+            // ── DOM refs ──
+            const output = document.getElementById('output');
+            const input = document.getElementById('command-input');
+
+            // ── state ──
+            let history = [];
+            let historyIndex = -1;
+
+            // ── helpers ──
+            function scrollToBottom() {
+                output.scrollTop = output.scrollHeight;
+            }
+
+            function appendLine(text, className = '') {
+                const div = document.createElement('div');
+                div.className = 'line ' + className;
+                div.innerHTML = text;
+                output.appendChild(div);
+                scrollToBottom();
+            }
+
+            function appendOutput(text, className = 'output-line') {
+                appendLine(text, className);
+            }
+
+            function appendPrompt(cmd) {
+                appendLine(`<span class="prompt-symbol">$</span> ${cmd}`, 'prompt-line');
+            }
+
+            // ── sticky header (always visible) ──
+            function buildStickyHeader() {
+                const header = document.createElement('div');
+                header.className = 'sticky-header';
+                header.id = 'sticky-header';
+                header.innerHTML = `
+                    <div class="title">P74 <span>Tools</span></div>
+                    <div class="cmd-grid">
+                        <a href="matrix.html">
+                            <span class="prompt-symbol">$</span>
+                            <span class="cmd-name">matrix</span>
+                            <span class="cmd-desc">polylingual matrix rain</span>
+                        </a>
+                        <a href="datetime.html">
+                            <span class="prompt-symbol">$</span>
+                            <span class="cmd-name">datetime</span>
+                            <span class="cmd-desc">decimal clock</span>
+                        </a>
+                        <a href="datetime-converter.html">
+                            <span class="prompt-symbol">$</span>
+                            <span class="cmd-name">time-converter</span>
+                            <span class="cmd-desc">time converter</span>
+                        </a>
+                        <a href="duodecimal.html">
+                            <span class="prompt-symbol">$</span>
+                            <span class="cmd-name">duodecimal</span>
+                            <span class="cmd-desc">duodecimal converter</span>
+                        </a>
+                    </div>
+                    <div class="hint">Type <span style="color:var(--prompt)">help</span> for all commands · <span style="color:var(--prompt)">clear</span> to clear screen</div>
+                `;
+                return header;
+            }
+
+            function renderStickyHeader() {
+                const old = document.getElementById('sticky-header');
+                if (old) old.remove();
+                const header = buildStickyHeader();
+                output.prepend(header);
+                scrollToBottom();
+            }
+
+            // ── command logic ──
+            function processCommand(cmd) {
+                const trimmed = cmd.trim();
+
+                if (trimmed === '') {
+                    appendPrompt('');
+                    return;
+                }
+
+                appendPrompt(trimmed);
+
+                const lower = trimmed.toLowerCase();
+
+                // ---- new commands ----
+                // cat (alone or with arguments)
+                if (lower === 'cat' || lower.startsWith('cat ')) {
+                    appendOutput('Meow', 'output-line');
+                    return;
+                }
+
+                // touch (alone or with arguments)
+                if (lower === 'touch' || lower.startsWith('touch ')) {
+                    appendOutput('permission denied', 'output-line error');
+                    return;
+                }
+
+                // uname (exact match only)
+                if (lower === 'uname') {
+                    appendOutput('P74', 'output-line');
+                    return;
+                }
+
+                // whoami (exact match only)
+                if (lower === 'whoami') {
+                    appendOutput('Pouyan', 'output-line');
+                    return;
+                }
+
+                // man (alone or with argument)
+                if (lower === 'man' || lower.startsWith('man ')) {
+                    let arg = '';
+                    if (lower === 'man') {
+                        arg = '';
+                    } else {
+                        // extract the argument after the space (preserve original case)
+                        const spaceIndex = trimmed.indexOf(' ');
+                        if (spaceIndex !== -1) {
+                            arg = trimmed.substring(spaceIndex + 1);
+                        } else {
+                            // fallback (should not happen)
+                            arg = '';
+                        }
+                    }
+                    appendOutput(`= woman${arg ? ' ' + arg : ''}`, 'output-line');
+                    return;
+                }
+				
+				// woman (alone or with argument)
+                if (lower === 'woman' || lower.startsWith('woman ')) {
+                    let arg = '';
+                    if (lower === 'woman') {
+                        arg = '';
+                    } else {
+                        // extract the argument after the space (preserve original case)
+                        const spaceIndex = trimmed.indexOf(' ');
+                        if (spaceIndex !== -1) {
+                            arg = trimmed.substring(spaceIndex + 1);
+                        } else {
+                            // fallback (should not happen)
+                            arg = '';
+                        }
+                    }
+                    appendOutput(`= man${arg ? ' ' + arg : ''}`, 'output-line');
+                    return;
+                }
+
+                // Navigation commands – redirect immediately
+                const navCommands = {
+                    'matrix': 'matrix.html',
+                    'datetime': 'datetime.html',
+                    'time-converter': 'datetime-converter.html',
+                    'duodecimal': 'duodecimal.html',
+                };
+
+                if (navCommands[lower]) {
+                    window.location.href = navCommands[lower];
+                    return;
+                }
+
+                // System / easter egg commands
+                switch (lower) {
+                    case 'exit':
+                        appendOutput('→ closing tab …', 'output-line dim');
+                        setTimeout(() => {
+                            try {
+                                window.close();
+                            } catch (_) {
+                                appendOutput('⚠️  Cannot close tab programmatically. Please close it manually (Ctrl+W / Cmd+W).',
+                                    'output-line error');
+                            }
+                        }, 200);
+                        break;
+
+                    case 'help':
+                        appendOutput('', '');
+                        appendOutput('Available commands:', 'output-line help');
+                        appendOutput('  <span class="cmd-name">matrix</span>            <span class="cmd-desc">Polylingual Matrix Rain</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">datetime</span>          <span class="cmd-desc">Decimal Clock</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">time-converter</span>    <span class="cmd-desc">Time Converter</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">duodecimal</span>        <span class="cmd-desc">Duodecimal Converter</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">cat</span>               <span class="cmd-desc">Concatenate files</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">man</span>               <span class="cmd-desc">Reference manuals</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">touch</span>             <span class="cmd-desc">Change file timestamps</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">uname</span>             <span class="cmd-desc">Print system name</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">whoami</span>            <span class="cmd-desc">Print current user</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">clear</span>             <span class="cmd-desc">Clear the terminal screen</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">exit</span>              <span class="cmd-desc">Close the tab</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">help</span>              <span class="cmd-desc">Show this help</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">pwd</span>               <span class="cmd-desc">Print working directory</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">ls</span>                <span class="cmd-desc">List directory contents</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">cd</span>                <span class="cmd-desc">Change directory</span>',
+                            'output-line help');
+                        appendOutput('', '');
+                        break;
+
+                    case 'clear':
+                        const header = document.getElementById('sticky-header');
+                        output.innerHTML = '';
+                        if (header) {
+                            output.appendChild(header);
+                        } else {
+                            renderStickyHeader();
+                        }
+                        scrollToBottom();
+                        break;
+
+                    case 'pwd':
+                        appendOutput('/ir/01001010/index', 'output-line dim');
+                        break;
+
+                    case 'ls':
+                        appendOutput('permission denied', 'output-line error');
+                        break;
+
+                    case 'cd':
+                        appendOutput('permission denied', 'output-line error');
+                        break;
+
+                    default:
+                        appendOutput(`"${trimmed}": command not found`, 'output-line error');
+                        break;
+                }
+            }
+
+            // ── input handling ──
+            function handleSubmit() {
+                const cmd = input.value;
+                if (cmd === undefined || cmd === null) return;
+
+                const trimmed = cmd.trim();
+                if (trimmed !== '') {
+                    history.push(cmd);
+                    historyIndex = history.length;
+                } else {
+                    historyIndex = history.length;
+                }
+
+                input.value = '';
+                processCommand(cmd);
+                historyIndex = history.length;
+            }
+
+            // ── keyboard events ──
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                    return;
+                }
+
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (history.length === 0) return;
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        input.value = history[historyIndex];
+                    }
+                    setTimeout(() => {
+                        input.selectionStart = input.selectionEnd = input.value.length;
+                    }, 0);
+                    return;
+                }
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (history.length === 0) return;
+                    if (historyIndex < history.length - 1) {
+                        historyIndex++;
+                        input.value = history[historyIndex];
+                    } else {
+                        historyIndex = history.length;
+                        input.value = '';
+                    }
+                    setTimeout(() => {
+                        input.selectionStart = input.selectionEnd = input.value.length;
+                    }, 0);
+                    return;
+                }
+
+                // Ctrl+L / Cmd+L → clear
+                if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                    e.preventDefault();
+                    const header = document.getElementById('sticky-header');
+                    output.innerHTML = '';
+                    if (header) {
+                        output.appendChild(header);
+                    } else {
+                        renderStickyHeader();
+                    }
+                    scrollToBottom();
+                }
+            });
+
+            // ── focus management ──
+            document.querySelector('.terminal').addEventListener('click', function(e) {
+                if (e.target.tagName !== 'INPUT') {
+                    input.focus();
+                }
+            });
+
+            input.addEventListener('blur', function() {
+                setTimeout(() => {
+                    if (document.activeElement !== input) {
+                        input.focus();
+                    }
+                }, 10);
+            });
+
+            // ── init ──
+            renderStickyHeader();
+
+            setTimeout(() => {
+                input.focus();
+            }, 100);
+
+            output.addEventListener('click', function() {
+                input.focus();
+            });
+
+            console.log('⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯');
+            console.log('  P74 Tools terminal active');
+            console.log('  Type "help" for commands · "clear" to clear');
+            console.log('⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯');
+
+        })();
+    </script>
+
 </body>
 
 </html>
