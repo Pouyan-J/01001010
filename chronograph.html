@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chronograph</title>
+    <title>Chronograph Watch</title>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
     <link rel="icon" href="icon.ico" />
     <style>
@@ -386,8 +385,11 @@
                 return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(centis)}`;
             }
 
-            function getDecimalTimeString(date) {
-                const totalSec = date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
+            // Decimal time from a Date object (with milliseconds) – returns hh:mm:ss (no fractions)
+            function getDecimalTimeStringFromDate(date) {
+                // Total standard seconds including fractional
+                const totalSec = date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds() + date.getMilliseconds() / 1000;
+                // Convert to decimal seconds (1 decimal day = 100000 decimal seconds)
                 const decSecTotal = (totalSec / 86400) * 100000;
                 const h = Math.floor(decSecTotal / 10000);
                 const m = Math.floor((decSecTotal % 10000) / 100);
@@ -395,16 +397,23 @@
                 return `${pad(h)}:${pad(m)}:${pad(s)}`;
             }
 
+            // Standard time string (hh:mm:ss) from Date
             function getStandardTimeString(date) {
                 return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
             }
 
-            // ─── Update current time (once per second) ────────────────
+            // ─── Update functions ─────────────────────────────────────
 
-            function updateCurrentTime() {
+            // Update standard current time – called every second
+            function updateStandardCurrentTime() {
                 const now = new Date();
                 elStdCurrent.textContent = getStandardTimeString(now);
-                elDecCurrent.textContent = getDecimalTimeString(now);
+            }
+
+            // Update decimal current time – called every frame for smoothness
+            function updateDecimalCurrentTime() {
+                const now = new Date();
+                elDecCurrent.textContent = getDecimalTimeStringFromDate(now);
             }
 
             // ─── Update chronograph & scales ──────────────────────────
@@ -445,16 +454,19 @@
             // ─── Animation loop ────────────────────────────────────────
 
             function frame(timestamp) {
+                // Update decimal current time on every frame
+                updateDecimalCurrentTime();
+
+                // Update chronograph and scales
                 if (state === STATE.RUNNING) {
                     updateChrono(timestamp);
-                    rafId = requestAnimationFrame(frame);
                 } else if (state === STATE.PAUSED) {
                     updateChrono(timestamp);
-                    rafId = requestAnimationFrame(frame);
                 } else {
                     updateChrono(timestamp);
-                    rafId = requestAnimationFrame(frame);
                 }
+
+                rafId = requestAnimationFrame(frame);
             }
 
             function startAnimation() {
@@ -520,14 +532,20 @@
             // ─── Init ──────────────────────────────────────────────────
 
             function init() {
-                updateCurrentTime();
-                setInterval(updateCurrentTime, 1000);
+                // Initial update
+                updateStandardCurrentTime();
+                updateDecimalCurrentTime();
 
+                // Standard time updates once per second
+                setInterval(updateStandardCurrentTime, 1000);
+
+                // Chronograph initial display
                 updateChrono(performance.now());
 
                 btnStart.addEventListener('click', handleStart);
                 btnReset.addEventListener('click', handleReset);
 
+                // Start the continuous animation loop (handles decimal time and chrono)
                 startAnimation();
 
                 setState(STATE.IDLE);
