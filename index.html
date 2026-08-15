@@ -10,6 +10,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+	
+	<link rel="icon" href="icon.ico" />
 
     <style>
     /* ── reset & base ── */
@@ -58,7 +60,7 @@
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		overflow: hidden;
-		box-shadow: 0 0 60px rgba(255, 255, 255, 0.02);
+		/* removed box-shadow to eliminate glow */
 		display: flex;
 		flex-direction: column;
 	}
@@ -527,6 +529,11 @@
                             <span class="cmd-name">duodecimal</span>
                             <span class="cmd-desc">duodecimal converter</span>
                         </a>
+                        <a href="chronograph.html">
+                            <span class="prompt-symbol">$</span>
+                            <span class="cmd-name">chronograph</span>
+                            <span class="cmd-desc">chronograph</span>
+                        </a>
                     </div>
                     <div class="hint">Type <span style="color:var(--prompt)">help</span> for all commands · <span style="color:var(--prompt)">clear</span> to clear screen</div>
                 `;
@@ -623,6 +630,7 @@
                     'datetime': 'datetime.html',
                     'time-converter': 'datetime-converter.html',
                     'duodecimal': 'duodecimal.html',
+                    'chronograph': 'chronograph.html',
                 };
 
                 if (navCommands[lower]) {
@@ -654,6 +662,8 @@
                         appendOutput('  <span class="cmd-name">time-converter</span>    <span class="cmd-desc">Time Converter</span>',
                             'output-line help');
                         appendOutput('  <span class="cmd-name">duodecimal</span>        <span class="cmd-desc">Duodecimal Converter</span>',
+                            'output-line help');
+                        appendOutput('  <span class="cmd-name">chronograph</span>       <span class="cmd-desc">Chronograph</span>',
                             'output-line help');
                         appendOutput('  <span class="cmd-name">cat</span>               <span class="cmd-desc">Concatenate files</span>',
                             'output-line help');
