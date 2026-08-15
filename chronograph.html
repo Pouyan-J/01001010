@@ -1,0 +1,542 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chronograph</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <link rel="icon" href="icon.ico" />
+    <style>
+        /* ── Reset & Base ── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            user-select: none;
+            position: relative;
+        }
+
+        /* ── Container ── */
+        .watch {
+            max-width: 720px;
+            width: 100%;
+            padding: 40px 30px 48px;
+            background: #000;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ── Current Time ── */
+        .current-time {
+            text-align: center;
+            margin-bottom: 28px;
+            line-height: 1.2;
+        }
+        .current-time .standard {
+            font-size: 56px;
+            color: #fff;
+            letter-spacing: 4px;
+        }
+        .current-time .decimal {
+            font-size: 28px;
+            color: #888;
+            letter-spacing: 2px;
+            margin-top: 2px;
+        }
+
+        /* ── Controls ── */
+        .controls {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        .controls button {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 18px;
+            letter-spacing: 2px;
+            padding: 10px 44px;
+            border: 1.5px solid #fff;
+            border-radius: 4px;
+            background: transparent;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            min-width: 130px;
+        }
+        .controls button:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+        .controls button:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* start button states – overridden by JS */
+        .controls .btn-start {
+            border-color: #fff;
+            color: #fff;
+        }
+        .controls .btn-start.running {
+            border-color: #f5c542;
+            color: #f5c542;
+        }
+        .controls .btn-start.paused {
+            border-color: #6bc9ff;
+            color: #6bc9ff;
+        }
+
+        .controls .btn-reset {
+            border-color: #fff;
+            color: #fff;
+        }
+        .controls .btn-reset:disabled {
+            border-color: #444;
+            color: #444;
+        }
+
+        /* ── Chronograph Display ── */
+        .chrono-display {
+            text-align: center;
+            margin-bottom: 30px;
+            line-height: 1.2;
+        }
+        .chrono-display .elapsed-standard {
+            font-size: 50px;
+            color: #fff;
+            letter-spacing: 3px;
+        }
+        .chrono-display .elapsed-decimal {
+            font-size: 26px;
+            color: #888;
+            letter-spacing: 2px;
+            margin-top: 2px;
+        }
+
+        /* ── Separator ── */
+        .divider {
+            width: 60%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.10);
+            margin: 4px 0 28px;
+        }
+
+        /* ── Scales ── */
+        .scales {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 0 6px;
+        }
+        .scale-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 22px;
+            letter-spacing: 0.5px;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .scale-row:last-child {
+            border-bottom: none;
+        }
+        .scale-row .label {
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #aaa;
+        }
+        .scale-row .value {
+            font-size: 26px;
+            font-weight: 400;
+            transition: color 0.1s;
+        }
+
+        /* scale colours */
+        .scale-row.tachymeter .value {
+            color: #4cd964;
+        }
+        .scale-row.telemeter .value {
+            color: #5ac8fa;
+        }
+        .scale-row.pulsometer .value {
+            color: #ff3b30;
+        }
+
+        /* ── Footer Links (bottom-right) ── */
+        .footer-links {
+            position: fixed;
+            bottom: 24px;
+            right: 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            z-index: 10;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            line-height: 1.5;
+        }
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.30);
+            text-decoration: none;
+            transition: color 0.2s ease;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .footer-links a:hover {
+            color: rgba(255, 255, 255, 0.80);
+            text-decoration: underline;
+        }
+        .footer-links .sep {
+            color: rgba(255, 255, 255, 0.12);
+            font-size: 12px;
+            padding: 0 2px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 540px) {
+            .watch {
+                padding: 24px 16px 32px;
+            }
+            .current-time .standard {
+                font-size: 38px;
+                letter-spacing: 2px;
+            }
+            .current-time .decimal {
+                font-size: 22px;
+            }
+            .chrono-display .elapsed-standard {
+                font-size: 36px;
+                letter-spacing: 2px;
+            }
+            .chrono-display .elapsed-decimal {
+                font-size: 20px;
+            }
+            .controls button {
+                font-size: 15px;
+                padding: 8px 24px;
+                min-width: 100px;
+            }
+            .controls {
+                gap: 14px;
+            }
+            .scale-row {
+                font-size: 18px;
+            }
+            .scale-row .value {
+                font-size: 20px;
+            }
+            .scale-row .label {
+                font-size: 13px;
+            }
+            .divider {
+                width: 80%;
+            }
+            .footer-links {
+                bottom: 16px;
+                right: 18px;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .current-time .standard {
+                font-size: 30px;
+            }
+            .chrono-display .elapsed-standard {
+                font-size: 28px;
+            }
+            .controls button {
+                font-size: 13px;
+                padding: 6px 16px;
+                min-width: 76px;
+            }
+            .scale-row .value {
+                font-size: 17px;
+            }
+            .scale-row .label {
+                font-size: 11px;
+            }
+            .footer-links {
+                bottom: 12px;
+                right: 14px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="watch">
+
+        <!-- Current Time -->
+        <div class="current-time">
+            <div class="standard" id="currentStandard">00:00:00</div>
+            <div class="decimal" id="currentDecimal">00:00:00</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn-start" id="btnStart">START</button>
+            <button class="btn-reset" id="btnReset" disabled>RESET</button>
+        </div>
+
+        <!-- Chronograph -->
+        <div class="chrono-display">
+            <div class="elapsed-standard" id="elapsedStandard">00:00:00.00</div>
+            <div class="elapsed-decimal" id="elapsedDecimal">00:00:00.00</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Scales -->
+        <div class="scales">
+            <div class="scale-row tachymeter">
+                <span class="label">Tachymeter</span>
+                <span class="value" id="tachymeter">0.0 km/h</span>
+            </div>
+            <div class="scale-row telemeter">
+                <span class="label">Telemeter</span>
+                <span class="value" id="telemeter">0.00 km</span>
+            </div>
+            <div class="scale-row pulsometer">
+                <span class="label">Pulsometer (15)</span>
+                <span class="value" id="pulsometer">0.0 bpm</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ─── Footer Links (bottom-right) ─── -->
+    <div class="footer-links">
+        <a href="https://01001010.ir" target="_blank" rel="noopener noreferrer">Main page</a>
+        <a href="https://p74.ir" target="_blank" rel="noopener noreferrer">Created by Pouyan</a>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ─── DOM refs ──────────────────────────────────────────────
+            const elStdCurrent = document.getElementById('currentStandard');
+            const elDecCurrent = document.getElementById('currentDecimal');
+            const elStdElapsed = document.getElementById('elapsedStandard');
+            const elDecElapsed = document.getElementById('elapsedDecimal');
+            const elTachymeter = document.getElementById('tachymeter');
+            const elTelemeter = document.getElementById('telemeter');
+            const elPulsometer = document.getElementById('pulsometer');
+            const btnStart = document.getElementById('btnStart');
+            const btnReset = document.getElementById('btnReset');
+
+            // ─── State ──────────────────────────────────────────────────
+            const STATE = {
+                IDLE: 'idle',
+                RUNNING: 'running',
+                PAUSED: 'paused',
+            };
+
+            let state = STATE.IDLE;
+            let startTimestamp = 0;
+            let accumulatedMs = 0;
+            let rafId = null;
+            let lastFrameTime = 0;
+
+            // ─── Helpers ───────────────────────────────────────────────
+
+            function pad(n, len = 2) {
+                return String(n).padStart(len, '0');
+            }
+
+            function formatStandardElapsed(ms) {
+                const totalSec = ms / 1000;
+                const hours = Math.floor(totalSec / 3600);
+                const minutes = Math.floor((totalSec % 3600) / 60);
+                const seconds = Math.floor(totalSec % 60);
+                const centis = Math.floor((ms % 1000) / 10);
+                return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(centis)}`;
+            }
+
+            function formatDecimalElapsed(ms) {
+                const totalSec = ms / 1000;
+                const decSecTotal = (totalSec / 86400) * 100000;
+                const hours = Math.floor(decSecTotal / 10000);
+                const minutes = Math.floor((decSecTotal % 10000) / 100);
+                const seconds = Math.floor(decSecTotal % 100);
+                const centis = Math.floor((decSecTotal % 1) * 100);
+                return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(centis)}`;
+            }
+
+            function getDecimalTimeString(date) {
+                const totalSec = date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
+                const decSecTotal = (totalSec / 86400) * 100000;
+                const h = Math.floor(decSecTotal / 10000);
+                const m = Math.floor((decSecTotal % 10000) / 100);
+                const s = Math.floor(decSecTotal % 100);
+                return `${pad(h)}:${pad(m)}:${pad(s)}`;
+            }
+
+            function getStandardTimeString(date) {
+                return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+            }
+
+            // ─── Update current time (once per second) ────────────────
+
+            function updateCurrentTime() {
+                const now = new Date();
+                elStdCurrent.textContent = getStandardTimeString(now);
+                elDecCurrent.textContent = getDecimalTimeString(now);
+            }
+
+            // ─── Update chronograph & scales ──────────────────────────
+
+            function updateChrono(nowMs) {
+                let elapsedMs;
+                if (state === STATE.RUNNING) {
+                    elapsedMs = (nowMs - startTimestamp) + accumulatedMs;
+                } else if (state === STATE.PAUSED) {
+                    elapsedMs = accumulatedMs;
+                } else {
+                    elapsedMs = 0;
+                }
+
+                if (elapsedMs < 0) elapsedMs = 0;
+
+                elStdElapsed.textContent = formatStandardElapsed(elapsedMs);
+                elDecElapsed.textContent = formatDecimalElapsed(elapsedMs);
+
+                const sec = elapsedMs / 1000;
+
+                if (sec > 0) {
+                    const tach = 3600 / sec;
+                    elTachymeter.textContent = tach < 9999 ? `${tach.toFixed(1)} km/h` : '>9999 km/h';
+
+                    const tele = sec * 0.34;
+                    elTelemeter.textContent = `${tele.toFixed(2)} km`;
+
+                    const puls = 900 / sec;
+                    elPulsometer.textContent = puls < 9999 ? `${puls.toFixed(1)} bpm` : '>9999 bpm';
+                } else {
+                    elTachymeter.textContent = '0.0 km/h';
+                    elTelemeter.textContent = '0.00 km';
+                    elPulsometer.textContent = '0.0 bpm';
+                }
+            }
+
+            // ─── Animation loop ────────────────────────────────────────
+
+            function frame(timestamp) {
+                if (state === STATE.RUNNING) {
+                    updateChrono(timestamp);
+                    rafId = requestAnimationFrame(frame);
+                } else if (state === STATE.PAUSED) {
+                    updateChrono(timestamp);
+                    rafId = requestAnimationFrame(frame);
+                } else {
+                    updateChrono(timestamp);
+                    rafId = requestAnimationFrame(frame);
+                }
+            }
+
+            function startAnimation() {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(frame);
+            }
+
+            // ─── Controls ──────────────────────────────────────────────
+
+            function setState(newState) {
+                state = newState;
+                updateButtons();
+            }
+
+            function updateButtons() {
+                switch (state) {
+                    case STATE.IDLE:
+                        btnStart.textContent = 'START';
+                        btnStart.className = 'btn-start';
+                        btnStart.disabled = false;
+                        btnReset.disabled = true;
+                        break;
+                    case STATE.RUNNING:
+                        btnStart.textContent = 'PAUSE';
+                        btnStart.className = 'btn-start running';
+                        btnStart.disabled = false;
+                        btnReset.disabled = true;
+                        break;
+                    case STATE.PAUSED:
+                        btnStart.textContent = 'RESUME';
+                        btnStart.className = 'btn-start paused';
+                        btnStart.disabled = false;
+                        btnReset.disabled = false;
+                        break;
+                }
+            }
+
+            function handleStart() {
+                if (state === STATE.IDLE) {
+                    accumulatedMs = 0;
+                    startTimestamp = performance.now();
+                    setState(STATE.RUNNING);
+                    startAnimation();
+                } else if (state === STATE.RUNNING) {
+                    accumulatedMs += (performance.now() - startTimestamp);
+                    setState(STATE.PAUSED);
+                } else if (state === STATE.PAUSED) {
+                    startTimestamp = performance.now();
+                    setState(STATE.RUNNING);
+                }
+            }
+
+            function handleReset() {
+                if (state === STATE.IDLE) return;
+                if (state === STATE.RUNNING) return;
+
+                accumulatedMs = 0;
+                startTimestamp = 0;
+                setState(STATE.IDLE);
+                updateChrono(performance.now());
+            }
+
+            // ─── Init ──────────────────────────────────────────────────
+
+            function init() {
+                updateCurrentTime();
+                setInterval(updateCurrentTime, 1000);
+
+                updateChrono(performance.now());
+
+                btnStart.addEventListener('click', handleStart);
+                btnReset.addEventListener('click', handleReset);
+
+                startAnimation();
+
+                setState(STATE.IDLE);
+            }
+
+            init();
+
+        })();
+    </script>
+
+</body>
+</html>
