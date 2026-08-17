@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دفتر محاسبهٔ قدرت خرید وام</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#101a19;
+    --ink-soft:#1c2927;
+    --paper:#f5f0e2;
+    --paper-line:#ddd4bb;
+    --gold:#b9903f;
+    --gold-bright:#d6ad5c;
+    --text-on-paper:#211c14;
+    --text-muted:#6d6552;
+    --text-on-ink:#e9e4d3;
+    --gain:#3f8a5f;
+    --gain-bg:#e4efe4;
+    --loss:#a8402f;
+    --loss-bg:#f3e3df;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 0%, #1a2523 0%, transparent 45%),
+      radial-gradient(circle at 90% 100%, #16211f 0%, transparent 40%),
+      var(--ink);
+    font-family:'Vazirmatn', sans-serif;
+    color:var(--text-on-ink);
+    padding:40px 16px 80px;
+  }
+
+  .wrap{ max-width:800px; margin:0 auto; }
+
+  header.page-head{
+    text-align:center;
+    margin-bottom:28px;
+  }
+  .eyebrow{
+    display:inline-block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:8px;
+    letter-spacing:.14em;
+    color:var(--text-muted);
+    border:1px solid var(--text-muted);
+    border-radius:999px;
+    padding:5px 14px;
+    margin-top:14px;
+  }
+  h1{
+    font-size:26px;
+    font-weight:800;
+    margin:0 0 8px;
+    color:var(--text-on-ink);
+  }
+  .sub{
+    color:#9a9585;
+    font-size:14px;
+    max-width:520px;
+    margin:0 auto;
+    line-height:1.9;
+  }
+
+  .sheet{
+    position:relative;
+    background:var(--paper);
+    color:var(--text-on-paper);
+    border-radius:8px;
+    padding:38px 30px 30px;
+    margin-top:34px;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,.55);
+  }
+  .sheet::before{
+    content:'';
+    position:absolute;
+    top:-8px; left:26px; right:26px; height:16px;
+    background-image:radial-gradient(circle at 8px 8px, var(--ink) 8px, transparent 8.5px);
+    background-size:22px 16px;
+    background-repeat:repeat-x;
+  }
+  .sheet + .sheet{ margin-top:22px; }
+
+  .sheet-title{
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.05em;
+    color:var(--gold);
+    text-transform:uppercase;
+    margin:0 0 4px;
+
+  }
+  .sheet-title span{ color:var(--text-muted); font-weight:500; }
+
+  hr.rule{
+    border:none;
+    border-top:1px dashed var(--paper-line);
+    margin:18px 0;
+  }
+
+  /* form */
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px 20px;
+    margin-top:18px;
+  }
+  @media (max-width:600px){ .grid{ grid-template-columns:1fr; } }
+
+  .field label{
+    display:block;
+    font-size:13.5px;
+    font-weight:600;
+    margin-bottom:6px;
+    color:var(--text-on-paper);
+  }
+  .field .cap{
+    display:block;
+    font-size:11.5px;
+    color:var(--text-muted);
+    margin-top:5px;
+    line-height:1.6;
+  }
+  .input-row{
+    position:relative;
+    display:flex;
+    align-items:center;
+  }
+  .field input{
+    width:100%;
+    font-family:'JetBrains Mono', monospace;
+    font-size:15px;
+    padding:10px 12px;
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    background:#fffdf7;
+    color:var(--text-on-paper);
+    outline:none;
+    transition:border-color .15s;
+    text-align:left;
+    direction:ltr;
+  }
+  .field input:focus{ border-color:var(--gold); }
+  .unit{
+    position:absolute;
+    left:12px;
+    font-size:12px;
+    color:var(--text-muted);
+    pointer-events:none;
+  }
+  .field input.has-unit{ padding-left:45px; }
+
+  .formula-note{
+    margin-top:20px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--text-muted);
+    background:#efe8d5;
+    border:1px dashed var(--paper-line);
+    border-radius:6px;
+    padding:12px 14px;
+    line-height:2;
+  }
+  .formula-note b{ color:var(--text-on-paper); }
+
+  .err{
+    display:none;
+    margin-top:16px;
+    background:var(--loss-bg);
+    color:var(--loss);
+    border:1px solid rgba(168,64,47,.35);
+    border-radius:6px;
+    padding:10px 14px;
+    font-size:13px;
+  }
+
+  /* results */
+  .stat-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+    margin-top:6px;
+  }
+  @media (max-width:600px){ .stat-row{ grid-template-columns:1fr; } }
+
+  .stamp{
+    border:2px solid var(--gain);
+    border-radius:10px;
+    padding:18px 16px;
+    text-align:center;
+    background:var(--gain-bg);
+  }
+  .stamp.loss{ border-color:var(--loss); background:var(--loss-bg); }
+  .stamp .label{
+    font-size:11.5px;
+    letter-spacing:.06em;
+    color:var(--text-muted);
+    font-weight:600;
+  }
+  .stamp .value{
+    font-family:'JetBrains Mono', monospace;
+    font-size:32px;
+    font-weight:700;
+    direction: ltr;
+    color:var(--gain);
+    margin-top:6px;
+  }
+  .stamp.loss .value{ color:var(--loss); }
+  .stamp .value small{ font-size:16px; font-weight:600; }
+
+  .stat-box{
+    border:1px solid var(--paper-line);
+    border-radius:10px;
+    padding:18px 16px;
+    text-align: center;
+    background:#fffdf7;
+  }
+  .stat-box .label{
+    font-size:11.5px;
+    letter-spacing:.06em;
+    color:var(--text-muted);
+    font-weight:600;
+  }
+  .stat-box .value{
+    font-family:'JetBrains Mono', monospace;
+    font-size:22px;
+    font-weight:700;
+    margin-top:8px;
+    color:var(--text-on-paper);
+  }
+  .stat-box .value small{ font-size:13px; color:var(--text-muted); font-weight:500; }
+
+  .breakdown{
+    margin-top:20px;
+    font-size:13px;
+    line-height:2.1;
+  }
+  .breakdown .row{
+    display:flex;
+    justify-content:space-between;
+    border-bottom:1px dotted var(--paper-line);
+    padding:4px 0;
+  }
+  .breakdown .row span:last-child{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:600;
+    direction:ltr;
+  }
+
+  /* table */
+  .table-wrap{ overflow-x:auto; margin-top:10px; }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13.5px;
+    min-width:560px;
+  }
+  thead th{
+    text-align:center;
+    font-size:11.5px;
+    letter-spacing:.04em;
+    color:var(--text-muted);
+    font-weight:700;
+    padding:8px 10px;
+    border-bottom:2px solid var(--gold);
+    text-transform:uppercase;
+  }
+  tbody td{
+    padding:9px 10px;
+    border-bottom:1px solid var(--paper-line);
+    font-family:'JetBrains Mono', monospace;
+  }
+  tbody tr:nth-child(even){ background:rgba(185,144,63,.06); }
+  td.month{ font-family:'Vazirmatn', sans-serif; font-weight:600; }
+  td.num{ direction:ltr; text-align:left; }
+
+  .decay{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    direction:ltr;
+  }
+  .decay .bar{
+    width:70px;
+    height:6px;
+    background:var(--paper-line);
+    border-radius:3px;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .decay .bar > i{
+    display:block;
+    height:100%;
+    background:var(--gold);
+  }
+  .decay .pct{ font-size:12px; color:var(--text-muted); white-space:nowrap; }
+
+  tfoot td{
+    padding:11px 10px;
+    font-weight:700;
+    border-top:2px solid var(--gold);
+    border-bottom:none;
+    font-family:'JetBrains Mono', monospace;
+  }
+  tfoot td.month{ font-family:'Vazirmatn', sans-serif; }
+
+  .final-line{
+    margin-top:22px;
+    padding-top:18px;
+    border-top:1px dashed var(--paper-line);
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .final-line .txt{ font-size:14px; font-weight:600; }
+  .final-line .amt{
+    font-family:'JetBrains Mono', monospace;
+    font-size:20px;
+    font-weight:700;
+    color:var(--gold);
+    direction:ltr;
+  }
+
+  footer.note{
+    text-align:center;
+    color:#7a7566;
+    font-size:11.5px;
+    margin-top:24px;
+    line-height:1.9;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <h1>دفتر محاسبهٔ قدرت خرید وام</h1>
+    <p class="sub">با وارد کردن مشخصات وام، می‌بینید در شرایط تورمی، ارزش واقعی چیزی که بازمی‌گردانید نسبت به چیزی که دریافت کرده‌اید، چقدر بوده است.</p>
+  </header>
+
+  <!-- INPUT SHEET -->
+  <div class="sheet">
+    <p class="sheet-title">بخش اول <span>— مشخصات وام</span></p>
+
+    <div class="grid">
+      <div class="field">
+        <label for="loanAmount">مبلغ وام</label>
+        <div class="input-row">
+          <input type="text" id="loanAmount" class="has-unit" inputmode="numeric" value="100,000,000">
+          <span class="unit">تومان</span>
+        </div>
+        <span class="cap">مبلغ اسمی وام؛ اقساط بر مبنای همین عدد محاسبه می‌شود.</span>
+      </div>
+
+      <div class="field">
+        <label for="fee">کارمزد اولیه</label>
+        <div class="input-row">
+          <input type="text" id="fee" class="has-unit" inputmode="numeric" value="10,000,000">
+          <span class="unit">تومان</span>
+        </div>
+        <span class="cap">همان لحظه از مبلغ وام کسر و به شما پرداخت نمی‌شود.</span>
+      </div>
+
+      <div class="field">
+        <label for="installments">تعداد اقساط</label>
+        <div class="input-row">
+          <input type="text" id="installments" class="has-unit" inputmode="numeric" value="6">
+          <span class="unit">ماه</span>
+        </div>
+        <span class="cap">تعداد ماه‌هایی که قسط پرداخت می‌کنید.</span>
+      </div>
+
+      <div class="field">
+        <label for="interestRate">نرخ سود</label>
+        <div class="input-row">
+          <input type="text" id="interestRate" class="has-unit" inputmode="decimal" value="20">
+          <span class="unit">٪</span>
+        </div>
+        <span class="cap">سود کل وام (نه سالیانه)، یک‌جا به مبلغ وام اضافه و بین اقساط تقسیم می‌شود.</span>
+      </div>
+
+      <div class="field">
+        <label for="gracePeriod">دورهٔ تنفس</label>
+        <div class="input-row">
+          <input type="text" id="gracePeriod" class="has-unit" inputmode="numeric" value="4">
+          <span class="unit">ماه</span>
+        </div>
+        <span class="cap">فاصله بین دریافت وام تا شروع اولین قسط.</span>
+      </div>
+
+      <div class="field">
+        <label for="inflationRate">نرخ تورم سالیانه</label>
+        <div class="input-row">
+          <input type="text" id="inflationRate" class="has-unit" inputmode="decimal" value="80">
+          <span class="unit">٪</span>
+        </div>
+        <span class="cap">برای تبدیل به تورم ماهانه به‌صورت مرکب محاسبه می‌شود.</span>
+      </div>
+    </div>
+
+    <div class="formula-note" id="formulaNote"></div>
+    <div class="err" id="errBox"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" style="display:none;">
+
+    <div class="sheet">
+      <p class="sheet-title">بخش دوم <span>— نتیجهٔ نهایی</span></p>
+
+      <div class="stat-row">
+        <div class="stamp" id="stampBox">
+          <div class="label">سود یا زیان واقعی وام</div>
+          <div class="value" id="profitValue">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">ارزش واقعی کل بازپرداخت (به قیمت روز دریافت وام)</div>
+          <div class="value" id="totalRealValue">—</div>
+        </div>
+      </div>
+
+      <div class="breakdown" id="breakdownBox"></div>
+    </div>
+
+    <div class="sheet">
+      <p class="sheet-title">بخش سوم <span>— دفترچهٔ اقساط</span></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ماه</th>
+              <th>مبلغ قسط (اسمی)</th>
+              <th>ارزش واقعی امروز</th>
+              <th>افت قدرت خرید</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+          <tfoot>
+            <tr>
+              <td class="month">جمع اقساط</td>
+              <td class="num" id="sumNominal">—</td>
+              <td class="num" id="sumReal">—</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="final-line">
+        <span class="txt">+ کارمزد اولیه (بدون تنزیل، همان ماه صِفر)</span>
+        <span class="amt" id="feeLineAmt">—</span>
+      </div>
+      <div class="final-line">
+        <span class="txt">= جمع کل ارزش واقعی پرداختی شما (کارمزد + اقساط)</span>
+        <span class="amt" id="grandTotalAmt">—</span>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="note">اعداد بر اساس تورم ماهانهٔ مرکب‌شده از نرخ سالیانه محاسبه می‌شوند و صرفاً برای برآورد شخصی هستند.
+    <br/><b>سلب مسئولیت:</b> این ابزارک تنها جهت مدیریت مالی شخصی بوده، و مسئولیت صحت‌سنجی محاسبات آن بر عهدهٔ کاربر است.
+    <br/><span class="eyebrow">V 0.1.0</span>
+  </footer>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const inputs = ['loanAmount','fee','installments','interestRate','gracePeriod','inflationRate'].map($);
+
+  function attachCommaFormatting(el){
+    el.addEventListener('input', () => {
+      const fromEnd = el.value.length - el.selectionStart;
+      const digits = el.value.replace(/[^\d]/g, '');
+      el.value = digits ? Number(digits).toLocaleString('en-US') : '';
+      const pos = Math.max(0, el.value.length - fromEnd);
+      el.setSelectionRange(pos, pos);
+    });
+  }
+  ['loanAmount','fee','installments','gracePeriod'].forEach(id => attachCommaFormatting($(id)));
+
+  function parseNum(str){
+    if (!str) return 0;
+    const n = Number(String(str).replace(/,/g,'').trim());
+    return isNaN(n) ? 0 : n;
+  }
+  function fmt(n, decimals=0){
+    return Number(n).toLocaleString('en-US', { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+  }
+  function toman(n){ return fmt(Math.round(n)) + ' تومان'; }
+
+  function calculate(){
+    const principal   = parseNum($('loanAmount').value);
+    const fee         = parseNum($('fee').value);
+    const nInstall    = Math.round(parseNum($('installments').value));
+    const rate        = parseNum($('interestRate').value) / 100;
+    const grace       = Math.round(parseNum($('gracePeriod').value));
+    const inflationYr = parseNum($('inflationRate').value) / 100;
+
+    $('formulaNote').innerHTML =
+      'قسط ماهانه = (مبلغ وام + مبلغ وام × نرخ سود) ÷ تعداد اقساط &nbsp;=&nbsp; ' +
+      '<b>' + toman((principal + principal*rate) / (nInstall || 1)) + '</b> در ماه';
+
+    const errBox = $('errBox');
+    if (!principal || !nInstall || nInstall < 1 || isNaN(rate) || isNaN(inflationYr)) {
+      errBox.style.display = 'block';
+      errBox.textContent = 'لطفاً مبلغ وام و تعداد اقساط را به‌درستی وارد کنید.';
+      $('results').style.display = 'none';
+      return;
+    }
+    if (principal - fee <= 0) {
+      errBox.style.display = 'block';
+      errBox.textContent = 'کارمزد نمی‌تواند برابر یا بیشتر از مبلغ وام باشد.';
+      $('results').style.display = 'none';
+      return;
+    }
+
+    errBox.style.display = 'none';
+
+    const received       = principal - fee;
+    const totalInterest  = principal * rate;
+    const totalRepayment = principal + totalInterest;
+    const monthlyInstall = totalRepayment / nInstall;
+    const monthlyInflation = Math.pow(1 + inflationYr, 1/12) - 1;
+
+    let sumNominal = 0, sumReal = 0;
+    const rows = [];
+    for (let k = 1; k <= nInstall; k++){
+      const month = grace + k;
+      const real = monthlyInstall / Math.pow(1 + monthlyInflation, month);
+      sumNominal += monthlyInstall;
+      sumReal += real;
+      const decayPct = (1 - real / monthlyInstall) * 100;
+      rows.push({ month, nominal: monthlyInstall, real, decayPct });
+    }
+
+    const totalRealPaid = fee + sumReal;
+    const profitPercent = ((received - totalRealPaid) / received) * 100;
+
+    // --- render stamp ---
+    const stamp = $('stampBox');
+    const isGain = profitPercent >= 0;
+    stamp.classList.toggle('loss', !isGain);
+    $('profitValue').innerHTML = (isGain ? '+' : '') + fmt(profitPercent, 2) + '<small>٪</small>';
+
+    $('totalRealValue').innerHTML = toman(totalRealPaid);
+
+    // --- breakdown ---
+    $('breakdownBox').innerHTML = `
+      <div class="row"><span>مبلغ خالص دریافتی (وام − کارمزد)</span><span>${toman(received)}</span></div>
+      <div class="row"><span>مجموع سود بانک</span><span>${toman(totalInterest)}</span></div>
+      <div class="row"><span>مجموع بازپرداخت اسمی (کارمزد + اقساط)</span><span>${toman(fee + sumNominal)}</span></div>
+      <div class="row"><span>تورم ماهانه معادل نرخ سالیانه</span><span>${fmt(monthlyInflation*100,2)}٪</span></div>
+      <div class="row"><span>قسط ماهانه ثابت</span><span>${toman(monthlyInstall)}</span></div>
+    `;
+
+    // --- table ---
+    const maxNominal = Math.max(...rows.map(r => r.nominal));
+    $('tableBody').innerHTML = rows.map(r => `
+      <tr>
+        <td class="month">ماه ${r.month}</td>
+        <td class="num">${toman(r.nominal)}</td>
+        <td class="num">${toman(r.real)}</td>
+        <td>
+          <div class="decay">
+            <span class="bar"><i style="width:${(100 - r.decayPct).toFixed(1)}%"></i></span>
+            <span class="pct">- ${fmt(r.decayPct,1)}٪</span>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    $('sumNominal').textContent = toman(sumNominal);
+    $('sumReal').textContent = toman(sumReal);
+    $('feeLineAmt').textContent = toman(fee);
+    $('grandTotalAmt').textContent = toman(totalRealPaid);
+
+    $('results').style.display = 'block';
+  }
+
+  inputs.forEach(el => el.addEventListener('input', calculate));
+  calculate();
+</script>
+</body>
+</html>
