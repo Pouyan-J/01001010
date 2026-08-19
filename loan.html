@@ -184,7 +184,7 @@
   /* results */
   .stat-row{
     display:grid;
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1fr 1fr 1fr;
     gap:18px;
     margin-top:6px;
   }
@@ -419,11 +419,27 @@
 
       <div class="stat-row">
         <div class="stamp" id="stampBox">
-          <div class="label">سود یا زیان واقعی وام</div>
+          <div class="label">
+            سود یا زیان واقعی وام
+            <br/>
+            (اختلاف دریافتی با ارزش واقعی بازپرداخت)
+          </div>
           <div class="value" id="profitValue">—</div>
         </div>
+        <div class="stamp" id="growthStamp">
+          <div class="label">
+            حداقل رشد سرمایهٔ لازم برای سوددهی
+            <br/>
+            (اختلاف دریافتی با ارزش واقعی اقساط)
+          </div>
+          <div class="value" id="growthValue">—</div>
+        </div>
         <div class="stat-box">
-          <div class="label">ارزش واقعی کل بازپرداخت (به قیمت روز دریافت وام)</div>
+          <div class="label">
+            ارزش واقعی کل بازپرداخت
+            <br/>
+            (به قیمت روز دریافت وام)
+          </div>
           <div class="value" id="totalRealValue">—</div>
         </div>
       </div>
@@ -469,7 +485,7 @@
 
   <footer class="note">اعداد بر اساس تورم ماهانهٔ مرکب‌شده از نرخ سالیانه محاسبه می‌شوند و صرفاً برای برآورد شخصی هستند.
     <br/><b>سلب مسئولیت:</b> این ابزارک تنها جهت مدیریت مالی شخصی بوده، و مسئولیت صحت‌سنجی محاسبات آن بر عهدهٔ کاربر است.
-    <br/><span class="eyebrow">V 0.1.1</span>
+    <br/><span class="eyebrow">V 0.2.0</span>
   </footer>
 </div>
 
@@ -546,13 +562,21 @@
     const totalRealPaid = fee + sumReal;
     const profitPercent = ((received - totalRealPaid) / received) * 100;
 
-    // --- render stamp ---
+    // --- استامپ جدید: حداقل رشد سرمایه لازم برای سوددهی (بدون کارمزد) ---
+    const growthPercent = ((sumReal - received) / received) * 100;
+
+    // --- استامپ اول (با کارمزد) ---
     const stamp = $('stampBox');
     const isGain = profitPercent >= 0;
     stamp.classList.toggle('loss', !isGain);
     $('profitValue').innerHTML = (isGain ? '+' : '') + fmt(profitPercent, 2) + '<small>٪</small>';
 
     $('totalRealValue').innerHTML = toman(totalRealPaid);
+
+    // --- استامپ جدید ---
+    const growthStamp = $('growthStamp');
+    growthStamp.classList.toggle('loss', growthPercent > 0);
+    $('growthValue').innerHTML = (growthPercent >= 0 ? '+' : '') + fmt(growthPercent, 2) + '<small>٪</small>';
 
     // --- breakdown ---
     $('breakdownBox').innerHTML = `
@@ -564,7 +588,6 @@
     `;
 
     // --- table ---
-    const maxNominal = Math.max(...rows.map(r => r.nominal));
     $('tableBody').innerHTML = rows.map(r => `
       <tr>
         <td class="month">ماه ${r.month}</td>
