@@ -32,6 +32,13 @@
   #watchFace { width: min(94vmin, 840px); }  /* dial only             */
   .watchSvg.is-hidden { display: none; }
 
+  /* ================= BEZEL TOUCH TARGETS ================= */
+  #bezelHit,
+  #fBezelHit {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
   /* ================= CORNER BUTTONS ================= */
   #modeToggle,
   #viewToggle,
@@ -961,76 +968,99 @@
   });
 
   /* =========================================================
-     ROTATING BEZEL : INTERACTION (per view)
+     ROTATING BEZEL : ONE SHARED ANGLE FOR BOTH VIEWS
      ========================================================= */
-  function setupBezel(svg, group, hit) {
-    let angle      = 0;
-    let dragId     = null;
-    let dragStart  = 0;
-    let startAngle = 0;
+  const svgWatch   = document.getElementById('watch');
+  const svgFace    = document.getElementById('watchFace');
+  const bezelGroups = [
+    document.getElementById('bezelGroup'),
+    document.getElementById('fBezelGroup')
+  ];
+  const bezelHits = [
+    document.getElementById('bezelHit'),
+    document.getElementById('fBezelHit')
+  ];
 
+  let bezelAngle = 0;                       // ← shared between both views
+
+  function applyBezel(deg) {
+    bezelAngle = deg;
+    const t = 'rotate(' + deg.toFixed(3) + ')';
+    bezelGroups.forEach(g => g.setAttribute('transform', t));
+  }
+
+  /* ---- drag state ---- */
+  let dragId          = null;
+  let dragSvg         = null;
+  let dragStart       = 0;
+  let startAngle      = 0;
+  let lastPointerType = 'mouse';
+
+  function pointerAngle(svg, evt) {
     const pt = svg.createSVGPoint();
+    pt.x = evt.clientX;
+    pt.y = evt.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return Math.atan2(p.x, -p.y) * 180 / Math.PI;
+  }
 
-    function pointerAngle(evt) {
-      pt.x = evt.clientX;
-      pt.y = evt.clientY;
-      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
-      return Math.atan2(p.x, -p.y) * 180 / Math.PI;
-    }
+  function onBezelMove(e) {
+    if (dragId === null || e.pointerId !== dragId) return;
+    let delta = pointerAngle(dragSvg, e) - dragStart;
+    while (delta >  180) delta -= 360;
+    while (delta < -180) delta += 360;
+    applyBezel(startAngle + delta);
+  }
 
-    function setBezel(deg) {
-      angle = deg;
-      group.setAttribute('transform', 'rotate(' + deg.toFixed(3) + ')');
-    }
+  function onBezelUp(e) {
+    if (dragId === null) return;
+    if (e && e.pointerId !== undefined && e.pointerId !== dragId) return;
+    dragId  = null;
+    dragSvg = null;
+    window.removeEventListener('pointermove',   onBezelMove);
+    window.removeEventListener('pointerup',     onBezelUp);
+    window.removeEventListener('pointercancel', onBezelUp);
+    bezelHits.forEach(h => { h.style.cursor = 'grab'; });
+  }
 
-    hit.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      dragId = e.pointerId;
-      hit.setPointerCapture(e.pointerId);
-      dragStart  = pointerAngle(e);
-      startAngle = angle;
-      hit.style.cursor = 'grabbing';
-    });
+  function onBezelDown(svg, e) {
+    if (dragId !== null) return;             // ignore extra fingers
+    e.preventDefault();
 
-    hit.addEventListener('pointermove', e => {
-      if (dragId === null || e.pointerId !== dragId) return;
-      let delta = pointerAngle(e) - dragStart;
-      while (delta >  180) delta -= 360;
-      while (delta < -180) delta += 360;
-      setBezel(startAngle + delta);
-    });
+    lastPointerType = e.pointerType || 'mouse';
 
-    function endDrag(e) {
-      if (dragId === null) return;
-      if (e && e.pointerId !== undefined && e.pointerId !== dragId) return;
-      dragId = null;
-      hit.style.cursor = 'grab';
-    }
-    hit.addEventListener('pointerup', endDrag);
-    hit.addEventListener('pointercancel', endDrag);
+    dragId     = e.pointerId;
+    dragSvg    = svg;
+    dragStart  = pointerAngle(svg, e);
+    startAngle = bezelAngle;
 
+    /* Safari/iOS can throw when capturing on SVG elements — the window-level
+       listeners below keep the drag alive even if capture is unavailable. */
+    try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+
+    bezelHits.forEach(h => { h.style.cursor = 'grabbing'; });
+
+    window.addEventListener('pointermove',   onBezelMove);
+    window.addEventListener('pointerup',     onBezelUp);
+    window.addEventListener('pointercancel', onBezelUp);
+  }
+
+  bezelHits[0].addEventListener('pointerdown', e => onBezelDown(svgWatch, e));
+  bezelHits[1].addEventListener('pointerdown', e => onBezelDown(svgFace,  e));
+
+  /* wheel + double-click reset (desktop niceties) */
+  bezelHits.forEach(hit => {
     hit.addEventListener('wheel', e => {
       e.preventDefault();
-      setBezel(angle + (e.deltaY > 0 ? 3 : -3));
+      applyBezel(bezelAngle + (e.deltaY > 0 ? 3 : -3));
     }, { passive: false });
 
     hit.addEventListener('dblclick', e => {
       e.preventDefault();
-      setBezel(0);
+      if (lastPointerType === 'touch') return;  // don't snap on double-tap
+      applyBezel(0);
     });
-  }
-
-  setupBezel(
-    document.getElementById('watch'),
-    document.getElementById('bezelGroup'),
-    document.getElementById('bezelHit')
-  );
-
-  setupBezel(
-    document.getElementById('watchFace'),
-    document.getElementById('fBezelGroup'),
-    document.getElementById('fBezelHit')
-  );
+  });
 
   /* =========================================================
      LIVE HANDS, DATE & WEEKDAY (both views, one loop)
@@ -1097,16 +1127,16 @@
      VIEW TOGGLE : FULL WATCH  <->  WATCH FACE
      ========================================================= */
   const viewBtn = document.getElementById('viewToggle');
-  const fullSvg = document.getElementById('watch');
-  const faceSvg = document.getElementById('watchFace');
   let faceView  = false;
 
   viewBtn.addEventListener('click', () => {
     faceView = !faceView;
-    fullSvg.classList.toggle('is-hidden',  faceView);
-    faceSvg.classList.toggle('is-hidden', !faceView);
+    svgWatch.classList.toggle('is-hidden',  faceView);
+    svgFace .classList.toggle('is-hidden', !faceView);
     viewBtn.textContent = faceView ? 'Full Watch' : 'Watch Face';
     viewBtn.setAttribute('aria-pressed', faceView ? 'true' : 'false');
+    /* both bezel groups already carry the shared angle, so orientation
+       is preserved automatically when switching views */
   });
 
   /* =========================================================
