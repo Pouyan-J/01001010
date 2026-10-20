@@ -86,6 +86,54 @@
   #viewToggle   { top: 58px;  }
   #backlightBtn { top: 100px; }
 
+  /* ================= CHRONOGRAPH CORNER BUTTONS ================= */
+  #chronoStartBtn,
+  #chronoResetBtn {
+    position: fixed;
+    right: 16px;
+    z-index: 100;
+    width: 110px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+    background: #161616;
+    color: #c6fad9;
+    font-family: 'Oswald', 'Bahnschrift Condensed', 'DIN Condensed',
+                 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    -webkit-touch-callout: none;
+    touch-action: none;
+  }
+  #chronoStartBtn { top: 142px; }
+  #chronoResetBtn { top: 184px; }
+  #chronoStartBtn:hover,
+  #chronoResetBtn:hover { background: #262626; }
+  #chronoStartBtn:active,
+  #chronoResetBtn:active { transform: translateY(1px); }
+
+  html.light-mode #chronoStartBtn,
+  html.light-mode #chronoResetBtn {
+    background: #ffffff;
+    color: #111111;
+    border-color: #999999;
+  }
+  html.light-mode #chronoStartBtn:hover,
+  html.light-mode #chronoResetBtn:hover { background: #f0f0f0; }
+
+  /* chronograph pushers (full watch only) */
+  .pusher {
+    cursor: pointer;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pusher:focus { outline: none; }
+
   #modeToggle:hover,
   #viewToggle:hover,
   #backlightBtn:hover { background: #262626; }
@@ -210,6 +258,8 @@
 <button id="modeToggle"   type="button" aria-pressed="false">Light</button>
 <button id="viewToggle"   type="button" aria-pressed="false">Watch Face</button>
 <button id="backlightBtn" type="button" aria-pressed="false">Backlight</button>
+<button id="chronoStartBtn" type="button">Start</button>
+<button id="chronoResetBtn" type="button">Reset</button>
 
 <!-- =========================================================
      VIEW 1 — FULL WATCH (default)
@@ -401,6 +451,45 @@
           stroke-linecap="round" clip-path="url(#crownClip)"/>
   </g>
 
+  <!-- ================= CHRONOGRAPH PUSHERS (2 and 4 o'clock) ================= -->
+  <!-- each pusher is drawn along +x then rotated into place -->
+  <g id="pusherStart" class="pusher" transform="rotate(-30)"
+     tabindex="0" role="button" aria-label="Chronograph start">
+    <g class="pusherBody">
+      <rect x="108" y="-4" width="14" height="8" fill="#0c0c0c"/>
+      <rect x="118" y="-6.5" width="16" height="13" rx="3"
+            fill="url(#crownGrad)"
+            stroke="#4d4d4d" stroke-opacity="0.5" stroke-width="0.7"/>
+      <line x1="120.5" y1="-4.6" x2="131.5" y2="-4.6"
+            stroke="#7a7a7a" stroke-opacity="0.55" stroke-width="1" stroke-linecap="round"/>
+      <line x1="120.5" y1="4.6" x2="131.5" y2="4.6"
+            stroke="#000000" stroke-opacity="0.6" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="133.4" y1="-5" x2="133.4" y2="5"
+            stroke="#5a5a5a" stroke-opacity="0.45" stroke-width="0.9" stroke-linecap="round"/>
+    </g>
+    <!-- generous invisible touch target, kept outside the case circle -->
+    <rect x="122" y="-15" width="30" height="30" fill="#000000" fill-opacity="0"
+          pointer-events="all"/>
+  </g>
+
+  <g id="pusherReset" class="pusher" transform="rotate(30)"
+     tabindex="0" role="button" aria-label="Chronograph reset">
+    <g class="pusherBody">
+      <rect x="108" y="-4" width="14" height="8" fill="#0c0c0c"/>
+      <rect x="118" y="-6.5" width="16" height="13" rx="3"
+            fill="url(#crownGrad)"
+            stroke="#4d4d4d" stroke-opacity="0.5" stroke-width="0.7"/>
+      <line x1="120.5" y1="-4.6" x2="131.5" y2="-4.6"
+            stroke="#7a7a7a" stroke-opacity="0.55" stroke-width="1" stroke-linecap="round"/>
+      <line x1="120.5" y1="4.6" x2="131.5" y2="4.6"
+            stroke="#000000" stroke-opacity="0.6" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="133.4" y1="-5" x2="133.4" y2="5"
+            stroke="#5a5a5a" stroke-opacity="0.45" stroke-width="0.9" stroke-linecap="round"/>
+    </g>
+    <rect x="122" y="-15" width="30" height="30" fill="#000000" fill-opacity="0"
+          pointer-events="all"/>
+  </g>
+
   <!-- ================= CASE BODY ================= -->
   <g id="caseBody">
     <circle r="122.6" fill="url(#caseGrad)"/>
@@ -453,7 +542,9 @@
        text-anchor="middle"
        dominant-baseline="central"></g>
 
-    <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
+    <g class="chronoDelta">
+      <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
+    </g>
 
     <text x="0.25" y="-70"
           fill="#bdf9d6"
@@ -481,7 +572,7 @@
           stroke-opacity="0.7"
           stroke-width="0.5"
           filter="url(#glowSoft)"/>
-    <text id="weekdayText" x="48" y="0"
+    <text id="weekdayText" x="48.5" y="0"
           fill="#a7f3c9"
           opacity="0.92"
           font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
@@ -491,7 +582,7 @@
           text-anchor="middle"
           dominant-baseline="central"
           filter="url(#glow)">MON</text>
-    <text id="dateText" x="68" y="0"
+    <text id="dateText" x="65.5" y="0"
           fill="#a7f3c9"
           opacity="0.92"
           font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
@@ -500,6 +591,26 @@
           text-anchor="middle"
           dominant-baseline="central"
           filter="url(#glow)">01</text>
+
+    <!-- chronograph read-out: HH : MM (hidden until started) -->
+    <text id="chronoHText" x="48.5" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#glow)">00</text>
+    <text id="chronoCText" x="57" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#glow)">:</text>
+    <text id="chronoMText" x="65.5" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#glow)">00</text>
   </g>
 
   <!-- ================= HANDS ================= -->
@@ -631,7 +742,9 @@
        text-anchor="middle"
        dominant-baseline="central"></g>
 
-    <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
+    <g class="chronoDelta">
+      <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
+    </g>
 
     <text x="0.25" y="-70"
           fill="#bdf9d6"
@@ -659,7 +772,7 @@
           stroke-opacity="0.7"
           stroke-width="0.5"
           filter="url(#fGlowSoft)"/>
-    <text id="fWeekdayText" x="48" y="0"
+    <text id="fWeekdayText" x="48.5" y="0"
           fill="#a7f3c9"
           opacity="0.92"
           font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
@@ -669,7 +782,7 @@
           text-anchor="middle"
           dominant-baseline="central"
           filter="url(#fGlow)">MON</text>
-    <text id="fDateText" x="68" y="0"
+    <text id="fDateText" x="65.5" y="0"
           fill="#a7f3c9"
           opacity="0.92"
           font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
@@ -678,6 +791,26 @@
           text-anchor="middle"
           dominant-baseline="central"
           filter="url(#fGlow)">01</text>
+
+    <!-- chronograph read-out: HH : MM (hidden until started) -->
+    <text id="fChronoHText" x="48.5" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#fGlow)">00</text>
+    <text id="fChronoCText" x="57" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#fGlow)">:</text>
+    <text id="fChronoMText" x="65.5" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#fGlow)">00</text>
   </g>
 
   <!-- ================= HANDS ================= -->
@@ -1116,7 +1249,11 @@
       sec:     document.getElementById('secHand'),
       h24:     document.getElementById('h24Hand'),
       date:    document.getElementById('dateText'),
-      weekday: document.getElementById('weekdayText')
+      weekday: document.getElementById('weekdayText'),
+      cH:      document.getElementById('chronoHText'),
+      cC:      document.getElementById('chronoCText'),
+      cM:      document.getElementById('chronoMText'),
+      delta:   document.querySelectorAll('.chronoDelta')[0]
     },
     {
       hour:    document.getElementById('fHourHand'),
@@ -1124,11 +1261,108 @@
       sec:     document.getElementById('fSecHand'),
       h24:     document.getElementById('fH24Hand'),
       date:    document.getElementById('fDateText'),
-      weekday: document.getElementById('fWeekdayText')
+      weekday: document.getElementById('fWeekdayText'),
+      cH:      document.getElementById('fChronoHText'),
+      cC:      document.getElementById('fChronoCText'),
+      cM:      document.getElementById('fChronoMText'),
+      delta:   document.querySelectorAll('.chronoDelta')[1]
     }
   ];
 
   const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+  /* =========================================================
+     CHRONOGRAPH
+     Start : date box swaps to elapsed HH:MM, the dial delta
+             starts sweeping (one lap per 60 s).
+     Reset : delta returns to 12, box shows the date again.
+     ========================================================= */
+  const pad2   = n => String(n).padStart(2, '0');
+  /* running : counting right now
+     active  : chronograph mode shown (true while running OR paused)
+     acc     : milliseconds banked before the current run segment */
+  const chrono = { running: false, active: false, t0: 0, acc: 0 };
+
+  const chronoElapsedMs = () =>
+    chrono.acc + (chrono.running ? performance.now() - chrono.t0 : 0);
+
+  function applyChronoMode(on) {
+    for (let i = 0; i < clocks.length; i++) {
+      const c = clocks[i];
+      c.date   .setAttribute('display', on ? 'none'   : 'inline');
+      c.weekday.setAttribute('display', on ? 'none'   : 'inline');
+      c.cH     .setAttribute('display', on ? 'inline' : 'none');
+      c.cC     .setAttribute('display', on ? 'inline' : 'none');
+      c.cM     .setAttribute('display', on ? 'inline' : 'none');
+    }
+  }
+
+  /* Start button: start -> pause -> resume -> pause ... */
+  function startChrono() {
+    if (chrono.running) {                  // pause: bank the time, freeze display
+      chrono.acc += performance.now() - chrono.t0;
+      chrono.running = false;
+      return;
+    }
+    chrono.running = true;                 // start or resume
+    chrono.t0 = performance.now();
+    if (!chrono.active) {
+      chrono.active = true;
+      applyChronoMode(true);               // date vanishes instantly
+    }
+  }
+
+  function resetChrono() {
+    chrono.running = false;
+    chrono.active  = false;
+    chrono.acc     = 0;
+    applyChronoMode(false);                // date is back
+  }
+
+  /* corner buttons */
+  document.getElementById('chronoStartBtn').addEventListener('click', startChrono);
+  document.getElementById('chronoResetBtn').addEventListener('click', resetChrono);
+
+  /* side pushers (act on press, spring back on release) */
+  function setupPusher(id, action) {
+    const g    = document.getElementById(id);
+    const body = g.querySelector('.pusherBody');
+    let pid = null;
+
+    g.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (pid !== null) return;
+      pid = e.pointerId;
+      try { g.setPointerCapture(e.pointerId); } catch (_) {}
+      body.setAttribute('transform', 'translate(-3,0)');
+      action();
+    });
+
+    function release(e) {
+      if (pid === null || (e && e.pointerId !== undefined && e.pointerId !== pid)) return;
+      pid = null;
+      body.removeAttribute('transform');
+    }
+    g.addEventListener('pointerup', release);
+    g.addEventListener('pointercancel', release);
+    g.addEventListener('lostpointercapture', release);
+    g.addEventListener('contextmenu', e => e.preventDefault());
+
+    g.addEventListener('keydown', e => {
+      if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) {
+        e.preventDefault();
+        body.setAttribute('transform', 'translate(-3,0)');
+        action();
+      }
+    });
+    g.addEventListener('keyup', e => {
+      if (e.key === ' ' || e.key === 'Enter') body.removeAttribute('transform');
+    });
+  }
+
+  setupPusher('pusherStart', startChrono);
+  setupPusher('pusherReset', resetChrono);
 
   function run() {
     const now = new Date();
@@ -1141,12 +1375,21 @@
     const day = String(now.getDate()).padStart(2, '0');
     const wd  = WEEKDAYS[now.getDay()];
 
+    const cs   = chronoElapsedMs() / 1000;
+    const cHH  = pad2(Math.floor(cs / 3600) % 100);
+    const cMM  = pad2(Math.floor(cs / 60) % 60);
+    const cDeg = (cs % 60) * 6;
+
     for (let i = 0; i < clocks.length; i++) {
       const c = clocks[i];
       c.hour.setAttribute('transform', 'rotate(' + (h   * 30).toFixed(4) + ')');
       c.min .setAttribute('transform', 'rotate(' + (m   * 6 ).toFixed(4) + ')');
       c.sec .setAttribute('transform', 'rotate(' + (s   * 6 ).toFixed(4) + ')');
       c.h24 .setAttribute('transform', 'rotate(' + (h24 * 15).toFixed(4) + ')');
+
+      c.delta.setAttribute('transform', 'rotate(' + cDeg.toFixed(4) + ')');
+      if (c.cH.textContent !== cHH) c.cH.textContent = cHH;
+      if (c.cM.textContent !== cMM) c.cM.textContent = cMM;
 
       if (c.date.textContent    !== day) c.date.textContent    = day;
       if (c.weekday.textContent !== wd)  c.weekday.textContent = wd;
