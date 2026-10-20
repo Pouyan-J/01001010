@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Poltergeist Watch</title>
 
 <!-- Tactical / military condensed font (Oswald) + monospaced brand font (Share Tech Mono) -->
@@ -18,6 +18,12 @@
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    /* MOBILE FIX: stop the browser from turning drags into scroll / zoom /
+       pull-to-refresh (which fires pointercancel and kills the bezel drag) */
+    touch-action: none;
+    overscroll-behavior: none;
     transition: background-color 0.25s ease;
   }
   body {
@@ -27,9 +33,18 @@
   }
 
   /* ================= VIEW CONTAINERS ================= */
-  .watchSvg { display: block; height: auto; }
-  #watch     { width: min(94vw, 54vh); }     /* full watch on strap   */
-  #watchFace { width: min(94vmin, 840px); }  /* dial only             */
+  .watchSvg {
+    display: block;
+    height: auto;
+    /* MOBILE FIX: touch-action must be set on the <svg> root element;
+       many mobile browsers ignore it on SVG child elements */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  #watch     { width: min(94vw, 54vh);    aspect-ratio: 340 / 570; }  /* full watch on strap   */
+  #watchFace { width: min(94vmin, 840px); aspect-ratio: 1 / 1;     }  /* dial only             */
   .watchSvg.is-hidden { display: none; }
 
   /* ================= BEZEL TOUCH TARGETS ================= */
@@ -37,7 +52,11 @@
   #fBezelHit {
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
+    touch-action: none;
   }
+
+  /* inner rim strokes overlap the bezel hit band — let touches pass through */
+  #caseInnerRim { pointer-events: none; }
 
   /* ================= CORNER BUTTONS ================= */
   #modeToggle,
@@ -989,34 +1008,56 @@
     bezelGroups.forEach(g => g.setAttribute('transform', t));
   }
 
+  /* ---- MOBILE FIX: block native touch gestures on the watch itself ----
+     touch-action in CSS does the main job; these listeners are a fallback for
+     browsers (older iOS Safari) that still start scroll / pinch-zoom anyway,
+     which would otherwise cancel the pointer drag mid-rotation. */
+  [svgWatch, svgFace].forEach(svg => {
+    svg.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
+    svg.addEventListener('touchmove',  e => { e.preventDefault(); }, { passive: false });
+  });
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => {
+    document.addEventListener(type, e => e.preventDefault());
+  });
+
   /* ---- drag state ---- */
   let dragId          = null;
-  let dragSvg         = null;
-  let dragStart       = 0;
-  let startAngle      = 0;
+  let dragCx          = 0;     // dial centre in screen pixels (fixed for the drag)
+  let dragCy          = 0;
+  let dragLast        = 0;     // previous pointer angle (for incremental tracking)
   let lastPointerType = 'mouse';
 
-  function pointerAngle(svg, evt) {
-    const pt = svg.createSVGPoint();
-    pt.x = evt.clientX;
-    pt.y = evt.clientY;
-    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
-    return Math.atan2(p.x, -p.y) * 180 / Math.PI;
+  /* Dial centre from the element's on-screen box. Both viewBoxes are centred on
+     the dial origin, so the box centre IS the dial centre. This avoids
+     getScreenCTM(), which is unreliable on some mobile browsers. */
+  function dialCentre(svg) {
+    const r = svg.getBoundingClientRect();
+    return [ r.left + r.width / 2, r.top + r.height / 2 ];
+  }
+
+  function pointerAngle(e) {
+    return Math.atan2(e.clientX - dragCx, -(e.clientY - dragCy)) * 180 / Math.PI;
   }
 
   function onBezelMove(e) {
     if (dragId === null || e.pointerId !== dragId) return;
-    let delta = pointerAngle(dragSvg, e) - dragStart;
+    e.preventDefault();
+
+    const a = pointerAngle(e);
+    let delta = a - dragLast;
     while (delta >  180) delta -= 360;
     while (delta < -180) delta += 360;
-    applyBezel(startAngle + delta);
+    dragLast = a;
+
+    /* incremental tracking: keeps working for fast swipes and for turning
+       more than half a revolution in a single drag */
+    applyBezel(bezelAngle + delta);
   }
 
   function onBezelUp(e) {
     if (dragId === null) return;
     if (e && e.pointerId !== undefined && e.pointerId !== dragId) return;
-    dragId  = null;
-    dragSvg = null;
+    dragId = null;
     window.removeEventListener('pointermove',   onBezelMove);
     window.removeEventListener('pointerup',     onBezelUp);
     window.removeEventListener('pointercancel', onBezelUp);
@@ -1025,22 +1066,25 @@
 
   function onBezelDown(svg, e) {
     if (dragId !== null) return;             // ignore extra fingers
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
 
     lastPointerType = e.pointerType || 'mouse';
 
-    dragId     = e.pointerId;
-    dragSvg    = svg;
-    dragStart  = pointerAngle(svg, e);
-    startAngle = bezelAngle;
+    const c = dialCentre(svg);
+    dragCx = c[0];
+    dragCy = c[1];
+
+    dragId   = e.pointerId;
+    dragLast = pointerAngle(e);
 
     /* Safari/iOS can throw when capturing on SVG elements — the window-level
        listeners below keep the drag alive even if capture is unavailable. */
-    try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
 
     bezelHits.forEach(h => { h.style.cursor = 'grabbing'; });
 
-    window.addEventListener('pointermove',   onBezelMove);
+    window.addEventListener('pointermove',   onBezelMove, { passive: false });
     window.addEventListener('pointerup',     onBezelUp);
     window.addEventListener('pointercancel', onBezelUp);
   }
