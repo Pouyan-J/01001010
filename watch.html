@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poltergeist Watch</title>
+
+<!-- Tactical / military condensed font (Oswald) + monospaced brand font (Share Tech Mono) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #000;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background-color 0.25s ease;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ================= VIEW CONTAINERS ================= */
+  .watchSvg { display: block; height: auto; }
+  #watch     { width: min(94vw, 54vh); }     /* full watch on strap   */
+  #watchFace { width: min(94vmin, 840px); }  /* dial only             */
+  .watchSvg.is-hidden { display: none; }
+
+  /* ================= CORNER BUTTONS ================= */
+  #modeToggle,
+  #viewToggle,
+  #backlightBtn {
+    position: fixed;
+    right: 16px;
+    z-index: 100;
+    width: 110px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+    background: #161616;
+    color: #c6fad9;
+    font-family: 'Oswald', 'Bahnschrift Condensed', 'DIN Condensed',
+                 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    -webkit-touch-callout: none;
+    touch-action: none;
+  }
+  #modeToggle   { top: 16px;  }
+  #viewToggle   { top: 58px;  }
+  #backlightBtn { top: 100px; }
+
+  #modeToggle:hover,
+  #viewToggle:hover,
+  #backlightBtn:hover { background: #262626; }
+  #modeToggle:active,
+  #viewToggle:active { transform: translateY(1px); }
+
+  /* backlight button reads as "lit" while held */
+  #backlightBtn[aria-pressed="true"] {
+    background: #5fbcff;
+    border-color: #5fbcff;
+    color: #000000;
+  }
+
+  /* ================= CROWN (hold for backlight) ================= */
+  #crown {
+    cursor: pointer;
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+  #crown:focus { outline: none; }
+  #crown:focus-visible { outline: none; }
+
+  /* ================= LIGHT MODE OVERRIDES ================= */
+  html.light-mode,
+  html.light-mode body {
+    background: #ffffff;
+  }
+
+  html.light-mode #modeToggle,
+  html.light-mode #viewToggle,
+  html.light-mode #backlightBtn {
+    background: #ffffff;
+    color: #111111;
+    border-color: #999999;
+  }
+  html.light-mode #modeToggle:hover,
+  html.light-mode #viewToggle:hover,
+  html.light-mode #backlightBtn:hover { background: #f0f0f0; }
+
+  html.light-mode #backlightBtn[aria-pressed="true"] {
+    background: #5fbcff;
+    border-color: #5fbcff;
+    color: #000000;
+  }
+
+  /* turn off every glow filter */
+  html.light-mode .watchSvg [filter] {
+    filter: none;
+  }
+
+  /* green fills → white */
+  html.light-mode .watchSvg [fill="#a7f3c9"],
+  html.light-mode .watchSvg [fill="#b6f7d0"],
+  html.light-mode .watchSvg [fill="#bdf9d6"],
+  html.light-mode .watchSvg [fill="#79d6a3"],
+  html.light-mode .watchSvg [fill="#c6fad9"],
+  html.light-mode .watchSvg [fill="#9fe9c2"],
+  html.light-mode .watchSvg [fill="#c9fbd9"] {
+    fill: #ffffff;
+  }
+
+  /* green strokes → white */
+  html.light-mode .watchSvg [stroke="#a7f3c9"],
+  html.light-mode .watchSvg [stroke="#bdf9d6"],
+  html.light-mode .watchSvg [stroke="#79d6a3"],
+  html.light-mode .watchSvg [stroke="#9fe9c2"] {
+    stroke: #ffffff;
+  }
+
+  /* ================= BACKLIGHT (electroluminescent dial) ================= */
+  html.backlight .dialBg { fill: #5fbcff !important; }
+
+  html.backlight .faceMarkings * {
+    fill: #000000 !important;
+    stroke: #000000 !important;
+    fill-opacity: 1 !important;
+    stroke-opacity: 1 !important;
+    opacity: 1 !important;
+  }
+
+  /* inner ring: circles are OUTLINES — keep fill:none so they don't become
+     black discs covering the 12h / 24h / decimal hour numerals. */
+  html.backlight .innerRing circle {
+    fill: none !important;
+    stroke: #000000 !important;
+    stroke-opacity: 1 !important;
+    opacity: 1 !important;
+  }
+  html.backlight .innerRing line {
+    stroke: #000000 !important;
+    stroke-opacity: 1 !important;
+    opacity: 1 !important;
+  }
+
+  /* hands: luminous inserts and centre pin go black */
+  html.backlight .hands [fill="#a7f3c9"],
+  html.backlight .hands [fill="#c9fbd9"] {
+    fill: #000000 !important;
+  }
+
+  /* date window: lit blue background, solid black frame and text */
+  html.backlight .dateWindow rect {
+    fill: #5fbcff !important;
+    stroke: #000000 !important;
+    stroke-opacity: 1 !important;
+  }
+  html.backlight .dateWindow text {
+    fill: #000000 !important;
+    opacity: 1 !important;
+  }
+
+  /* halos make no sense on a lit dial — switch them off */
+  html.backlight .faceMarkings,
+  html.backlight .innerRing,
+  html.backlight .hands,
+  html.backlight .dateWindow rect,
+  html.backlight .dateWindow text { filter: none !important; }
+</style>
+</head>
+<body>
+
+<button id="modeToggle"   type="button" aria-pressed="false">Light</button>
+<button id="viewToggle"   type="button" aria-pressed="false">Watch Face</button>
+<button id="backlightBtn" type="button" aria-pressed="false">Backlight</button>
+
+<!-- =========================================================
+     VIEW 1 — FULL WATCH (default)
+     ========================================================= -->
+<svg id="watch" class="watchSvg" viewBox="-170 -285 340 570"
+     xmlns="http://www.w3.org/2000/svg"
+     shape-rendering="geometricPrecision">
+
+  <defs>
+    <!-- bezel insert shading -->
+    <radialGradient id="bezelGrad" gradientUnits="userSpaceOnUse"
+                    cx="-47" cy="-55" r="150">
+      <stop offset="0%"   stop-color="#383838"/>
+      <stop offset="32%"  stop-color="#191919"/>
+      <stop offset="68%"  stop-color="#080808"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <!-- crystal sheen -->
+    <radialGradient id="sheen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- knurled teeth shading -->
+    <radialGradient id="teethGrad" gradientUnits="userSpaceOnUse"
+                    cx="-45" cy="-55" r="210">
+      <stop offset="0%"   stop-color="#4d4d4d"/>
+      <stop offset="26%"  stop-color="#2a2a2a"/>
+      <stop offset="60%"  stop-color="#0e0e0e"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <!-- case body -->
+    <radialGradient id="caseGrad" gradientUnits="userSpaceOnUse"
+                    cx="-45" cy="-55" r="180">
+      <stop offset="0%"   stop-color="#2c2c2c"/>
+      <stop offset="45%"  stop-color="#141414"/>
+      <stop offset="100%" stop-color="#020202"/>
+    </radialGradient>
+
+    <!-- lug steel -->
+    <linearGradient id="lugGrad" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0%"   stop-color="#3d3d3d"/>
+      <stop offset="42%"  stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#040404"/>
+    </linearGradient>
+
+    <!-- crown steel (cylinder: light on top, dark at bottom) -->
+    <linearGradient id="crownGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#5a5a5a"/>
+      <stop offset="16%"  stop-color="#383838"/>
+      <stop offset="48%"  stop-color="#1a1a1a"/>
+      <stop offset="82%"  stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+
+    <!-- NATO webbing -->
+    <pattern id="natoWeave" width="10" height="3.4" patternUnits="userSpaceOnUse">
+      <rect width="10" height="3.4" fill="#141414"/>
+      <rect y="0"   width="10" height="1.4" fill="#1f1f1f"/>
+      <rect y="1.4" width="10" height="0.7" fill="#0b0b0b"/>
+      <rect x="0" y="2.1" width="5" height="1.3" fill="#191919"/>
+      <rect x="5" y="2.1" width="5" height="1.3" fill="#161616"/>
+    </pattern>
+
+    <linearGradient id="strapShade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0.9"/>
+      <stop offset="14%"  stop-color="#000000" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="86%"  stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.9"/>
+    </linearGradient>
+
+    <linearGradient id="fadeDown" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeUp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- clip used to keep the crown fluting inside the cylinder body -->
+    <clipPath id="crownClip">
+      <rect x="120" y="-13.5" width="18" height="27" rx="4"/>
+    </clipPath>
+
+    <clipPath id="dialClip"><circle r="91"/></clipPath>
+
+    <filter id="glow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="glowSoft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- ================= BLACK NATO STRAP ================= -->
+  <g id="strap">
+    <rect x="-52" y="-300" width="104" height="600" fill="url(#natoWeave)"/>
+    <rect x="-52" y="-300" width="104" height="600" fill="url(#strapShade)"/>
+
+    <!-- edge stitching -->
+    <line x1="-45" y1="-300" x2="-45" y2="300"
+          stroke="#3d3d3d" stroke-opacity="0.55" stroke-width="0.9"
+          stroke-dasharray="3.2 2.6"/>
+    <line x1="45" y1="-300" x2="45" y2="300"
+          stroke="#3d3d3d" stroke-opacity="0.55" stroke-width="0.9"
+          stroke-dasharray="3.2 2.6"/>
+
+    <!-- woven edge rails -->
+    <line x1="-51.6" y1="-300" x2="-51.6" y2="300" stroke="#2e2e2e" stroke-width="0.9"/>
+    <line x1="51.6"  y1="-300" x2="51.6"  y2="300" stroke="#2e2e2e" stroke-width="0.9"/>
+
+    <!-- depth fade into the darkness -->
+    <rect x="-52" y="-300" width="104" height="90" fill="url(#fadeDown)"/>
+    <rect x="-52" y="210"  width="104" height="90" fill="url(#fadeUp)"/>
+
+    <!-- keeper loop -->
+    <g>
+      <rect x="-55" y="196" width="110" height="13" rx="2.6"
+            fill="#1b1b1b" stroke="#313131" stroke-width="0.7"/>
+      <rect x="-55" y="196" width="110" height="2.4" rx="1.2"
+            fill="#2c2c2c" opacity="0.85"/>
+      <rect x="-55" y="206.4" width="110" height="2.6" rx="1.2"
+            fill="#050505" opacity="0.85"/>
+    </g>
+  </g>
+
+  <!-- ================= LUGS (black steel) ================= -->
+  <g id="lugs" fill="url(#lugGrad)"
+     stroke="#4a4a4a" stroke-opacity="0.42" stroke-width="0.7"
+     stroke-linejoin="round">
+    <path id="lugShape"
+          d="M51,-108
+             L51,-141
+             Q51.2,-145.6 55.8,-145.6
+             L61.8,-145.6
+             Q66.4,-145.6 66.8,-140.8
+             C68.5,-130 72,-113 78,-97
+             L86,-86
+             L86,-52
+             L51,-52 Z"/>
+    <use href="#lugShape" transform="scale(-1,1)"/>
+    <use href="#lugShape" transform="rotate(180)"/>
+    <use href="#lugShape" transform="scale(-1,1) rotate(180)"/>
+  </g>
+
+  <!-- ================= CYLINDRICAL PILOT CROWN (hold = backlight) ================= -->
+  <g id="crown" tabindex="0" role="button"
+     aria-label="Backlight" aria-pressed="false">
+    <!-- crown tube (hidden inside the case) -->
+    <rect x="108" y="-6" width="18" height="12" fill="#0c0c0c"/>
+    <rect x="108" y="-6" width="18" height="2.2" fill="#242424"/>
+
+    <!-- cylinder body: width 18, height 27 -->
+    <rect x="120" y="-13.5" width="18" height="27" rx="4"
+          fill="url(#crownGrad)"
+          stroke="#4d4d4d" stroke-opacity="0.5" stroke-width="0.7"/>
+
+    <!-- vertical knurled fluting -->
+    <g id="crownFlutes" clip-path="url(#crownClip)"
+       stroke="#000000" stroke-opacity="0.55" stroke-width="1.5"
+       stroke-linecap="butt"></g>
+
+    <!-- specular highlight along the top of the cylinder -->
+    <line x1="122.5" y1="-11.4" x2="135.5" y2="-11.4"
+          stroke="#7a7a7a" stroke-opacity="0.55" stroke-width="1.2"
+          stroke-linecap="round" clip-path="url(#crownClip)"/>
+
+    <!-- shadow along the bottom of the cylinder -->
+    <line x1="122.5" y1="11.4" x2="135.5" y2="11.4"
+          stroke="#000000" stroke-opacity="0.6" stroke-width="1.4"
+          stroke-linecap="round" clip-path="url(#crownClip)"/>
+
+    <!-- flat outer end cap edge -->
+    <line x1="137.4" y1="-12.2" x2="137.4" y2="12.2"
+          stroke="#5a5a5a" stroke-opacity="0.45" stroke-width="1"
+          stroke-linecap="round" clip-path="url(#crownClip)"/>
+  </g>
+
+  <!-- ================= CASE BODY ================= -->
+  <g id="caseBody">
+    <circle r="122.6" fill="url(#caseGrad)"/>
+    <circle r="120.8" fill="none" stroke="#3a3a3a" stroke-opacity="0.5" stroke-width="0.6"/>
+    <circle r="122.6" fill="none" stroke="#565656" stroke-opacity="0.45" stroke-width="0.8"/>
+  </g>
+
+  <!-- ================= ROTATING BEZEL ================= -->
+  <g id="bezelGroup">
+    <!-- flat-topped (trapezoid) knurled rim, generated in JS -->
+    <g id="bezelTeeth"></g>
+
+    <!-- bezel insert -->
+    <circle r="102.75" fill="none" stroke="#050505" stroke-width="19.5"/>
+    <circle r="112.2" fill="none" stroke="#202020" stroke-width="0.55"/>
+    <circle r="102.5" fill="none" stroke="#1c1c1c" stroke-opacity="0.35" stroke-width="0.3"/>
+    <circle r="93.1"  fill="none" stroke="#1c1c1c" stroke-opacity="0.6" stroke-width="0.4"/>
+
+    <g id="bezelMarks" filter="url(#glowSoft)"></g>
+  </g>
+
+  <!-- ================= BEZEL HIT AREA ================= -->
+  <circle id="bezelHit" r="106.2" fill="none"
+          stroke="#000000" stroke-opacity="0" stroke-width="32.6"
+          pointer-events="all"
+          style="cursor:grab; touch-action:none;"/>
+
+  <!-- ================= STATIC INNER RIM ================= -->
+  <g id="caseInnerRim">
+    <circle r="92"   fill="none" stroke="#0a0a0a" stroke-width="2"/>
+    <circle r="91.3" fill="none" stroke="#2e2e2e" stroke-opacity="0.6" stroke-width="0.5"/>
+    <circle r="92.9" fill="none" stroke="#2e2e2e" stroke-opacity="0.4" stroke-width="0.5"/>
+  </g>
+
+  <!-- ================= WATCH FACE ================= -->
+  <circle id="dialBg" class="dialBg" r="91" fill="#000000"/>
+  <circle r="91" fill="none" stroke="#171b19" stroke-width="0.8"/>
+
+  <!-- ================= INNER RING AROUND HOUR NUMERALS ================= -->
+  <g id="innerRing" class="innerRing" filter="url(#glowSoft)"></g>
+
+  <!-- ================= LUMINOUS MARKINGS ================= -->
+  <g id="faceMarkings" class="faceMarkings" filter="url(#glow)">
+    <g id="ticks" stroke="#a7f3c9" fill="none"></g>
+    <g id="medTicks" stroke="#a7f3c9" fill="none"></g>
+    <g id="msTicks" stroke="#79d6a3" stroke-opacity="0.38" fill="none"></g>
+    <g id="nums"
+       fill="#b6f7d0"
+       font-family="'Oswald', 'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+       text-anchor="middle"
+       dominant-baseline="central"></g>
+
+    <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
+
+    <text x="0.25" y="-70"
+          fill="#bdf9d6"
+          font-family="'Share Tech Mono', 'Courier New', 'Lucida Console', monospace"
+          font-size="6.2"
+          letter-spacing="0.5"
+          text-anchor="middle"
+          dominant-baseline="central">POLTERGEIST</text>
+
+    <text x="0.15" y="-64.2"
+          fill="#a7f3c9"
+          opacity="0.85"
+          font-family="'Share Tech Mono', 'Courier New', 'Lucida Console', monospace"
+          font-size="3.8"
+          letter-spacing="0.3"
+          text-anchor="middle"
+          dominant-baseline="central">WR 300M - SOLAR</text>
+  </g>
+
+  <!-- ================= DATE WINDOW ================= -->
+  <g id="dateWindow" class="dateWindow">
+    <rect x="40" y="-5.5" width="34" height="11" rx="1.2"
+          fill="#000000"
+          stroke="#bdf9d6"
+          stroke-opacity="0.7"
+          stroke-width="0.5"
+          filter="url(#glowSoft)"/>
+    <text id="weekdayText" x="48" y="0"
+          fill="#a7f3c9"
+          opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="6"
+          font-weight="600"
+          letter-spacing="0.8"
+          text-anchor="middle"
+          dominant-baseline="central"
+          filter="url(#glow)">MON</text>
+    <text id="dateText" x="68" y="0"
+          fill="#a7f3c9"
+          opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7"
+          font-weight="700"
+          text-anchor="middle"
+          dominant-baseline="central"
+          filter="url(#glow)">01</text>
+  </g>
+
+  <!-- ================= HANDS ================= -->
+  <g id="hands" class="hands" filter="url(#glow)">
+    <g id="hourHand">
+      <path d="M-3.6,10 L-2.1,-33 L0,-40 L2.1,-33 L3.6,10 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
+      <path d="M-1.5,5 L-0.85,-30 L0,-36 L0.85,-30 L1.5,5 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <g id="minHand">
+      <path d="M-3,10 L-2.1,-70 L0,-74 L2.1,-70 L3,10 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
+      <path d="M-1.5,5 L-0.85,-66.5 L0,-70.5 L0.85,-66.5 L1.5,5 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <g id="h24Hand">
+      <path d="M-1.1,8 L-0.8,-58 L0.8,-58 L1.1,8 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
+      <path d="M0,-74 L2,-57 L-2,-57 Z"
+            fill="#a7f3c9"
+            stroke="#2b302e"
+            stroke-width="0.4"
+            stroke-linejoin="round"/>
+    </g>
+
+    <g id="secHand">
+      <path d="M-1.2,14 L-0.9,-70 L0,-74 L0.9,-70 L1.2,14 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
+      <path d="M-0.4,10 L-0.32,-67 L0,-70.5 L0.32,-67 L0.4,10 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <circle r="4.1" fill="#0a0a0a" stroke="#33393a" stroke-width="0.45"/>
+    <circle r="1.55" fill="#c9fbd9"/>
+  </g>
+
+  <!-- ================= CRYSTAL SHEEN ================= -->
+  <g clip-path="url(#dialClip)" pointer-events="none">
+    <ellipse cx="-28" cy="-46" rx="66" ry="42" fill="url(#sheen)"/>
+  </g>
+
+</svg>
+
+<!-- =========================================================
+     VIEW 2 — WATCH FACE ONLY
+     ========================================================= -->
+<svg id="watchFace" class="watchSvg is-hidden" viewBox="-122 -122 244 244"
+     xmlns="http://www.w3.org/2000/svg"
+     shape-rendering="geometricPrecision">
+
+  <defs>
+    <radialGradient id="fBezelGrad" gradientUnits="userSpaceOnUse"
+                    cx="-47" cy="-55" r="150">
+      <stop offset="0%"   stop-color="#383838"/>
+      <stop offset="32%"  stop-color="#191919"/>
+      <stop offset="68%"  stop-color="#080808"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <radialGradient id="fSheen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="fGlow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="fGlowSoft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <clipPath id="fDialClip"><circle r="91"/></clipPath>
+  </defs>
+
+  <!-- ================= FIXED METAL BEZEL RING ================= -->
+  <g id="fBezelStatic">
+    <circle r="103" fill="none" stroke="url(#fBezelGrad)" stroke-width="24"/>
+
+    <circle r="114.7" fill="none" stroke="#737373" stroke-opacity="0.42" stroke-width="0.7"/>
+    <circle r="113.6" fill="none" stroke="#000000" stroke-opacity="0.65" stroke-width="0.5"/>
+    <circle r="92.2"  fill="none" stroke="#000000" stroke-opacity="0.65" stroke-width="0.5"/>
+    <circle r="91.2"  fill="none" stroke="#000000" stroke-opacity="0.9"  stroke-width="0.9"/>
+  </g>
+
+  <!-- ================= ROTATING BEZEL INSERT ================= -->
+  <g id="fBezelGroup">
+    <circle r="102.75" fill="none" stroke="#000000" stroke-width="19.5"/>
+
+    <circle r="93.1"  fill="none" stroke="#1c1c1c" stroke-opacity="0.6" stroke-width="0.35"/>
+    <circle r="112.4" fill="none" stroke="#1c1c1c" stroke-opacity="0.6" stroke-width="0.35"/>
+    <circle r="102.5" fill="none" stroke="#1c1c1c" stroke-opacity="0.3" stroke-width="0.28"/>
+
+    <g id="fBezelMarks" filter="url(#fGlowSoft)"></g>
+  </g>
+
+  <!-- ================= BEZEL HIT AREA ================= -->
+  <circle id="fBezelHit" r="103" fill="none"
+          stroke="#000000" stroke-opacity="0" stroke-width="24"
+          pointer-events="all"
+          style="cursor:grab; touch-action:none;"/>
+
+  <!-- ================= WATCH FACE ================= -->
+  <circle id="fDialBg" class="dialBg" r="91" fill="#000000"/>
+  <circle r="91" fill="none" stroke="#171b19" stroke-width="0.8"/>
+
+  <!-- ================= INNER RING AROUND HOUR NUMERALS ================= -->
+  <g id="fInnerRing" class="innerRing" filter="url(#fGlowSoft)"></g>
+
+  <!-- ================= LUMINOUS MARKINGS ================= -->
+  <g id="fFaceMarkings" class="faceMarkings" filter="url(#fGlow)">
+    <g id="fTicks" stroke="#a7f3c9" fill="none"></g>
+    <g id="fMedTicks" stroke="#a7f3c9" fill="none"></g>
+    <g id="fMsTicks" stroke="#79d6a3" stroke-opacity="0.38" fill="none"></g>
+    <g id="fNums"
+       fill="#b6f7d0"
+       font-family="'Oswald', 'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+       text-anchor="middle"
+       dominant-baseline="central"></g>
+
+    <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
+
+    <text x="0.25" y="-70"
+          fill="#bdf9d6"
+          font-family="'Share Tech Mono', 'Courier New', 'Lucida Console', monospace"
+          font-size="6.2"
+          letter-spacing="0.5"
+          text-anchor="middle"
+          dominant-baseline="central">POLTERGEIST</text>
+
+    <text x="0.15" y="-64.2"
+          fill="#a7f3c9"
+          opacity="0.85"
+          font-family="'Share Tech Mono', 'Courier New', 'Lucida Console', monospace"
+          font-size="3.8"
+          letter-spacing="0.3"
+          text-anchor="middle"
+          dominant-baseline="central">WR 300M - SOLAR</text>
+  </g>
+
+  <!-- ================= DATE WINDOW ================= -->
+  <g id="fDateWindow" class="dateWindow">
+    <rect x="40" y="-5.5" width="34" height="11" rx="1.2"
+          fill="#000000"
+          stroke="#bdf9d6"
+          stroke-opacity="0.7"
+          stroke-width="0.5"
+          filter="url(#fGlowSoft)"/>
+    <text id="fWeekdayText" x="48" y="0"
+          fill="#a7f3c9"
+          opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="6"
+          font-weight="600"
+          letter-spacing="0.8"
+          text-anchor="middle"
+          dominant-baseline="central"
+          filter="url(#fGlow)">MON</text>
+    <text id="fDateText" x="68" y="0"
+          fill="#a7f3c9"
+          opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7"
+          font-weight="700"
+          text-anchor="middle"
+          dominant-baseline="central"
+          filter="url(#fGlow)">01</text>
+  </g>
+
+  <!-- ================= HANDS ================= -->
+  <g id="fHands" class="hands" filter="url(#fGlow)">
+    <g id="fHourHand">
+      <path d="M-3.6,10 L-2.1,-33 L0,-40 L2.1,-33 L3.6,10 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
+      <path d="M-1.5,5 L-0.85,-30 L0,-36 L0.85,-30 L1.5,5 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <g id="fMinHand">
+      <path d="M-3,10 L-2.1,-70 L0,-74 L2.1,-70 L3,10 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
+      <path d="M-1.5,5 L-0.85,-66.5 L0,-70.5 L0.85,-66.5 L1.5,5 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <g id="fH24Hand">
+      <path d="M-1.1,8 L-0.8,-58 L0.8,-58 L1.1,8 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
+      <path d="M0,-74 L2,-57 L-2,-57 Z"
+            fill="#a7f3c9"
+            stroke="#2b302e"
+            stroke-width="0.4"
+            stroke-linejoin="round"/>
+    </g>
+
+    <g id="fSecHand">
+      <path d="M-1.2,14 L-0.9,-70 L0,-74 L0.9,-70 L1.2,14 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
+      <path d="M-0.4,10 L-0.32,-67 L0,-70.5 L0.32,-67 L0.4,10 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <circle r="4.1" fill="#0a0a0a" stroke="#33393a" stroke-width="0.45"/>
+    <circle r="1.55" fill="#c9fbd9"/>
+  </g>
+
+  <!-- ================= CRYSTAL SHEEN ================= -->
+  <g clip-path="url(#fDialClip)" pointer-events="none">
+    <ellipse cx="-28" cy="-46" rx="66" ry="42" fill="url(#fSheen)"/>
+  </g>
+
+</svg>
+
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const mk = (tag, attrs) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  };
+
+  const polar = (r, deg) => {
+    const a = deg * Math.PI / 180;
+    return [ +(Math.sin(a) * r).toFixed(3), +(-Math.cos(a) * r).toFixed(3) ];
+  };
+
+  /* ================= TACTICAL FONT ================= */
+  const TACTICAL_FONT =
+    "'Oswald', 'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', " +
+    "'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+  /* ================= FULL WATCH : CROWN FLUTING ================= */
+  const crownFlutes = document.getElementById('crownFlutes');
+  if (crownFlutes) {
+    for (let x = 122.6; x <= 135.4; x += 2.56) {
+      crownFlutes.appendChild(mk('line', {
+        x1: +x.toFixed(2), y1: -12.5,
+        x2: +x.toFixed(2), y2: 12.5
+      }));
+    }
+  }
+
+  /* ================= FULL WATCH : TRAPEZOID BEZEL RIM ================= */
+  const bezelTeeth = document.getElementById('bezelTeeth');
+  if (bezelTeeth) {
+    const N_TEETH = 12;          // 12 flat-topped teeth
+    const R_TIP   = 119.8;       // crown of the tooth (flat top)
+    const R_ROOT  = 112.6;       // valley between teeth → narrow band
+    const PERIOD  = 360 / N_TEETH;
+
+    let toothPath = '';
+    for (let i = 0; i < N_TEETH; i++) {
+      const a0 = i * PERIOD;
+      const a1 = a0 + PERIOD * 0.25;
+      const a2 = a0 + PERIOD * 0.75;
+      const a3 = a0 + PERIOD;
+
+      const [x0, y0] = polar(R_ROOT, a0);
+      const [x1, y1] = polar(R_TIP,  a1);
+      const [x2, y2] = polar(R_TIP,  a2);
+      const [x3, y3] = polar(R_ROOT, a3);
+
+      toothPath += (i === 0 ? 'M' : 'L') + x0 + ',' + y0 + ' ';
+      toothPath += 'L' + x1 + ',' + y1 + ' ';
+      toothPath += 'L' + x2 + ',' + y2 + ' ';
+      toothPath += 'L' + x3 + ',' + y3 + ' ';
+    }
+    toothPath += 'Z';
+
+    bezelTeeth.appendChild(mk('path', {
+      d: toothPath,
+      fill: 'url(#teethGrad)',
+      stroke: '#3d3d3d',
+      'stroke-opacity': 0.5,
+      'stroke-width': 0.4,
+      'stroke-linejoin': 'miter'
+    }));
+  }
+
+  /* =========================================================
+     SHARED DIAL BUILDER (used by BOTH views)
+     ========================================================= */
+  function buildDial(els) {
+    const { ticks, medTicks, msTicks, innerRing, nums, bezelMarks } = els;
+
+    /* ---- HOUR / MINUTE TRACK ---- */
+    for (let i = 1; i < 60; i++) {
+      const five = i % 5 === 0;
+      const [x1, y1] = polar(five ? 77.5 : 82.5, i * 6);
+      const [x2, y2] = polar(86.5, i * 6);
+      ticks.appendChild(mk('line', {
+        x1, y1, x2, y2,
+        'stroke-width': five ? 1.5 : 0.55,
+        'stroke-linecap': 'butt'
+      }));
+    }
+
+    /* ---- MEDIAN TRACK ---- */
+    for (let i = 0; i < 12; i++) {
+      const deg = i * 30 + 15;
+      const [x1, y1] = polar(80, deg);
+      const [x2, y2] = polar(86.5, deg);
+      medTicks.appendChild(mk('line', {
+        x1, y1, x2, y2,
+        'stroke-width': 1.0,
+        'stroke-linecap': 'butt'
+      }));
+    }
+
+    /* ---- MILLISECOND LINES ---- */
+    const MS_SUB = 9;
+    for (let i = 0; i < 60; i++) {
+      for (let j = 1; j <= MS_SUB; j++) {
+        const deg = i * 6 + j * (6 / (MS_SUB + 1));
+        const [x1, y1] = polar(88.1, deg);
+        const [x2, y2] = polar(89.7, deg);
+        msTicks.appendChild(mk('line', {
+          x1, y1, x2, y2,
+          'stroke-width': 0.22,
+          'stroke-linecap': 'butt'
+        }));
+      }
+    }
+
+    /* ---- INNER RING ---- */
+    const ringR = 55.5;
+
+    innerRing.appendChild(mk('circle', {
+      r: ringR, fill: 'none', stroke: '#a7f3c9',
+      'stroke-opacity': 0.30, 'stroke-width': 0.45
+    }));
+
+    innerRing.appendChild(mk('circle', {
+      r: 24.5, fill: 'none', stroke: '#a7f3c9',
+      'stroke-opacity': 0.30, 'stroke-width': 0.45
+    }));
+
+    for (let i = 0; i < 60; i++) {
+      const deg = i * 6;
+      const isHour = i % 5 === 0;
+      const inner = isHour ? ringR - 3.4 : ringR - 1.8;
+      const [x1, y1] = polar(inner, deg);
+      const [x2, y2] = polar(ringR, deg);
+
+      innerRing.appendChild(mk('line', {
+        x1, y1, x2, y2,
+        stroke: '#a7f3c9',
+        'stroke-opacity': isHour ? 0.55 : 0.28,
+        'stroke-width': isHour ? 0.9 : 0.35,
+        'stroke-linecap': 'butt'
+      }));
+    }
+
+    /* ---- NUMERALS ---- */
+    nums.setAttribute('font-family', TACTICAL_FONT);
+
+    const label = (x, y, size, weight, opacity, fill, str) => {
+      const t = mk('text', {
+        x, y,
+        'font-size': size,
+        'font-weight': weight,
+        fill,
+        opacity,
+        'font-family': TACTICAL_FONT
+      });
+      t.textContent = str;
+      nums.appendChild(t);
+    };
+
+    // outer minute numerals
+    for (let i = 1; i <= 11; i++) {
+      if (i === 3) continue;               // replaced by the date window
+      const [x, y] = polar(69, i * 30);
+      label(x, y, 11.6, 600, 1, '#bdf9d6', String(i * 5));
+    }
+
+    // 12-hour numerals
+    for (let h = 1; h <= 12; h++) {
+      if (h === 3) continue;               // replaced by the date window
+      const [x, y] = polar(46.5, h * 30);
+      label(x, y, 7.4, 500, 0.92, '#a7f3c9', String(h));
+    }
+
+    // 24-hour numerals
+    for (let h = 1; h <= 12; h++) {
+      const [x, y] = polar(32.5, h * 30);
+      label(x, y, 5.2, 500, 0.5, '#79d6a3', String(h + 12));
+    }
+
+    // decimal (10-hour) numerals
+    for (let h = 1; h <= 10; h++) {
+      const deg = (h % 10) * 36;
+      const [x, y] = polar(20, deg);
+      label(x, y, 4.6, 500, 0.45, '#79d6a3', String(h));
+    }
+
+    /* ---- BEZEL : minute numerals 5 … 55 ---- */
+    for (let m = 5; m <= 55; m += 5) {
+      const deg = m * 6;
+      const [x, y] = polar(98, deg);
+      const t = mk('text', {
+        x, y,
+        'font-family': TACTICAL_FONT,
+        'font-size': 6.6,
+        'font-weight': 600,
+        'fill': '#c6fad9',
+        'text-anchor': 'middle',
+        'dominant-baseline': 'central',
+        transform: 'rotate(' + deg + ',' + x + ',' + y + ')'
+      });
+      t.textContent = m;
+      bezelMarks.appendChild(t);
+    }
+
+    /* ---- BEZEL : GMT numerals 1 … 23 ---- */
+    for (let h = 1; h <= 23; h++) {
+      const deg = h * 15;
+      const [x, y] = polar(107.5, deg);
+      const t = mk('text', {
+        x, y,
+        'font-family': TACTICAL_FONT,
+        'font-size': 5.0,
+        'font-weight': 500,
+        'fill': '#9fe9c2',
+        'opacity': 0.82,
+        'text-anchor': 'middle',
+        'dominant-baseline': 'central',
+        transform: 'rotate(' + deg + ',' + x + ',' + y + ')'
+      });
+      t.textContent = h;
+      bezelMarks.appendChild(t);
+    }
+
+    /* ---- BEZEL : 1-minute indicators ---- */
+    for (let i = 0; i < 60; i++) {
+      if (i % 5 === 0) continue;
+      const deg = i * 6;
+      const [x1, y1] = polar(93.2, deg);
+      const [x2, y2] = polar(96.8, deg);
+      bezelMarks.appendChild(mk('line', {
+        x1, y1, x2, y2,
+        stroke: '#9fe9c2',
+        'stroke-opacity': 0.8,
+        'stroke-width': 0.6,
+        'stroke-linecap': 'butt'
+      }));
+    }
+
+    /* ---- BEZEL : luminous delta at 12 ---- */
+    bezelMarks.appendChild(mk('path', {
+      d: 'M0,-93 L5.2,-103 L-5.2,-103 Z',
+      fill: '#c9fbd9'
+    }));
+  }
+
+  buildDial({
+    ticks:      document.getElementById('ticks'),
+    medTicks:   document.getElementById('medTicks'),
+    msTicks:    document.getElementById('msTicks'),
+    innerRing:  document.getElementById('innerRing'),
+    nums:       document.getElementById('nums'),
+    bezelMarks: document.getElementById('bezelMarks')
+  });
+
+  buildDial({
+    ticks:      document.getElementById('fTicks'),
+    medTicks:   document.getElementById('fMedTicks'),
+    msTicks:    document.getElementById('fMsTicks'),
+    innerRing:  document.getElementById('fInnerRing'),
+    nums:       document.getElementById('fNums'),
+    bezelMarks: document.getElementById('fBezelMarks')
+  });
+
+  /* =========================================================
+     ROTATING BEZEL : INTERACTION (per view)
+     ========================================================= */
+  function setupBezel(svg, group, hit) {
+    let angle      = 0;
+    let dragId     = null;
+    let dragStart  = 0;
+    let startAngle = 0;
+
+    const pt = svg.createSVGPoint();
+
+    function pointerAngle(evt) {
+      pt.x = evt.clientX;
+      pt.y = evt.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      return Math.atan2(p.x, -p.y) * 180 / Math.PI;
+    }
+
+    function setBezel(deg) {
+      angle = deg;
+      group.setAttribute('transform', 'rotate(' + deg.toFixed(3) + ')');
+    }
+
+    hit.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dragId = e.pointerId;
+      hit.setPointerCapture(e.pointerId);
+      dragStart  = pointerAngle(e);
+      startAngle = angle;
+      hit.style.cursor = 'grabbing';
+    });
+
+    hit.addEventListener('pointermove', e => {
+      if (dragId === null || e.pointerId !== dragId) return;
+      let delta = pointerAngle(e) - dragStart;
+      while (delta >  180) delta -= 360;
+      while (delta < -180) delta += 360;
+      setBezel(startAngle + delta);
+    });
+
+    function endDrag(e) {
+      if (dragId === null) return;
+      if (e && e.pointerId !== undefined && e.pointerId !== dragId) return;
+      dragId = null;
+      hit.style.cursor = 'grab';
+    }
+    hit.addEventListener('pointerup', endDrag);
+    hit.addEventListener('pointercancel', endDrag);
+
+    hit.addEventListener('wheel', e => {
+      e.preventDefault();
+      setBezel(angle + (e.deltaY > 0 ? 3 : -3));
+    }, { passive: false });
+
+    hit.addEventListener('dblclick', e => {
+      e.preventDefault();
+      setBezel(0);
+    });
+  }
+
+  setupBezel(
+    document.getElementById('watch'),
+    document.getElementById('bezelGroup'),
+    document.getElementById('bezelHit')
+  );
+
+  setupBezel(
+    document.getElementById('watchFace'),
+    document.getElementById('fBezelGroup'),
+    document.getElementById('fBezelHit')
+  );
+
+  /* =========================================================
+     LIVE HANDS, DATE & WEEKDAY (both views, one loop)
+     ========================================================= */
+  const clocks = [
+    {
+      hour:    document.getElementById('hourHand'),
+      min:     document.getElementById('minHand'),
+      sec:     document.getElementById('secHand'),
+      h24:     document.getElementById('h24Hand'),
+      date:    document.getElementById('dateText'),
+      weekday: document.getElementById('weekdayText')
+    },
+    {
+      hour:    document.getElementById('fHourHand'),
+      min:     document.getElementById('fMinHand'),
+      sec:     document.getElementById('fSecHand'),
+      h24:     document.getElementById('fH24Hand'),
+      date:    document.getElementById('fDateText'),
+      weekday: document.getElementById('fWeekdayText')
+    }
+  ];
+
+  const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+  function run() {
+    const now = new Date();
+    const ms  = now.getMilliseconds();
+    const s   = now.getSeconds() + ms / 1000;
+    const m   = now.getMinutes() + s / 60;
+    const h   = (now.getHours() % 12) + m / 60;
+    const h24 = now.getHours() + m / 60;
+
+    const day = String(now.getDate()).padStart(2, '0');
+    const wd  = WEEKDAYS[now.getDay()];
+
+    for (let i = 0; i < clocks.length; i++) {
+      const c = clocks[i];
+      c.hour.setAttribute('transform', 'rotate(' + (h   * 30).toFixed(4) + ')');
+      c.min .setAttribute('transform', 'rotate(' + (m   * 6 ).toFixed(4) + ')');
+      c.sec .setAttribute('transform', 'rotate(' + (s   * 6 ).toFixed(4) + ')');
+      c.h24 .setAttribute('transform', 'rotate(' + (h24 * 15).toFixed(4) + ')');
+
+      if (c.date.textContent    !== day) c.date.textContent    = day;
+      if (c.weekday.textContent !== wd)  c.weekday.textContent = wd;
+    }
+
+    requestAnimationFrame(run);
+  }
+  run();
+
+  /* =========================================================
+     LIGHT / DARK MODE TOGGLE
+     ========================================================= */
+  const modeBtn = document.getElementById('modeToggle');
+
+  modeBtn.addEventListener('click', () => {
+    const on = document.documentElement.classList.toggle('light-mode');
+    modeBtn.textContent = on ? 'Dark' : 'Light';
+    modeBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
+  /* =========================================================
+     VIEW TOGGLE : FULL WATCH  <->  WATCH FACE
+     ========================================================= */
+  const viewBtn = document.getElementById('viewToggle');
+  const fullSvg = document.getElementById('watch');
+  const faceSvg = document.getElementById('watchFace');
+  let faceView  = false;
+
+  viewBtn.addEventListener('click', () => {
+    faceView = !faceView;
+    fullSvg.classList.toggle('is-hidden',  faceView);
+    faceSvg.classList.toggle('is-hidden', !faceView);
+    viewBtn.textContent = faceView ? 'Full Watch' : 'Watch Face';
+    viewBtn.setAttribute('aria-pressed', faceView ? 'true' : 'false');
+  });
+
+  /* =========================================================
+     BACKLIGHT (hold the crown, the button, or Space / Enter)
+     ========================================================= */
+  const backlightBtn = document.getElementById('backlightBtn');
+  const crown        = document.getElementById('crown');
+
+  function setBacklight(on) {
+    document.documentElement.classList.toggle('backlight', on);
+    backlightBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    crown.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+
+  function holdBacklight(el) {
+    let pointerId = null;
+
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      pointerId = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      setBacklight(true);
+    });
+
+    function end(e) {
+      if (pointerId !== null && e && e.pointerId !== undefined &&
+          e.pointerId !== pointerId) return;
+      pointerId = null;
+      setBacklight(false);
+    }
+
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('lostpointercapture', end);
+    el.addEventListener('contextmenu', e => e.preventDefault());
+
+    el.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (!e.repeat) setBacklight(true);
+      }
+    });
+    el.addEventListener('keyup', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        setBacklight(false);
+      }
+    });
+    el.addEventListener('blur', () => setBacklight(false));
+
+    return end;
+  }
+
+  const endCrown = holdBacklight(crown);
+  const endBtn   = holdBacklight(backlightBtn);
+
+  /* safety: releasing the pointer anywhere on the page ends the backlight */
+  window.addEventListener('pointerup',     e => { endCrown(e); endBtn(e); });
+  window.addEventListener('pointercancel', e => { endCrown(e); endBtn(e); });
+})();
+</script>
+
+</body>
+</html>
