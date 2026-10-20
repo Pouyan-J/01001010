@@ -82,9 +82,9 @@
     -webkit-touch-callout: none;
     touch-action: none;
   }
-  #modeToggle   { top: 16px;  }
-  #viewToggle   { top: 58px;  }
-  #backlightBtn { top: 100px; }
+  #modeToggle   { top: 16px; right: auto; left: 16px; }
+  #viewToggle   { top: 58px; right: auto; left: 16px; }
+  #backlightBtn { top: 16px; }
 
   /* ================= CHRONOGRAPH CORNER BUTTONS ================= */
   #chronoStartBtn,
@@ -109,8 +109,8 @@
     -webkit-touch-callout: none;
     touch-action: none;
   }
-  #chronoStartBtn { top: 142px; }
-  #chronoResetBtn { top: 184px; }
+  #chronoStartBtn { top: 58px;  }
+  #chronoResetBtn { top: 100px; }
   #chronoStartBtn:hover,
   #chronoResetBtn:hover { background: #262626; }
   #chronoStartBtn:active,
@@ -1302,6 +1302,7 @@
     if (chrono.running) {                  // pause: bank the time, freeze display
       chrono.acc += performance.now() - chrono.t0;
       chrono.running = false;
+      updateChronoLabel();
       return;
     }
     chrono.running = true;                 // start or resume
@@ -1310,6 +1311,7 @@
       chrono.active = true;
       applyChronoMode(true);               // date vanishes instantly
     }
+    updateChronoLabel();
   }
 
   function resetChrono() {
@@ -1317,6 +1319,13 @@
     chrono.active  = false;
     chrono.acc     = 0;
     applyChronoMode(false);                // date is back
+    updateChronoLabel();
+  }
+
+  /* Start button reads "Pause" while the chronograph is running */
+  function updateChronoLabel() {
+    document.getElementById('chronoStartBtn').textContent =
+      chrono.running ? 'Pause' : 'Start';
   }
 
   /* corner buttons */
