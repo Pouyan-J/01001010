@@ -214,6 +214,11 @@
     opacity: 1 !important;
   }
 
+  /* stationary outline delta: keep it an outline in backlight mode */
+  html.backlight .faceMarkings .deltaOutline {
+    fill: none !important;
+  }
+
   /* inner ring: circles are OUTLINES — keep fill:none so they don't become
      black discs covering the 12h / 24h / decimal hour numerals. */
   html.backlight .innerRing circle {
@@ -542,6 +547,10 @@
        text-anchor="middle"
        dominant-baseline="central"></g>
 
+    <!-- stationary outline delta (sits underneath the moving solid one) -->
+    <path class="deltaOutline" d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z"
+          fill="none" stroke="#bdf9d6" stroke-width="0.5" stroke-linejoin="miter"/>
+
     <g class="chronoDelta">
       <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
     </g>
@@ -572,7 +581,7 @@
           stroke-opacity="0.7"
           stroke-width="0.5"
           filter="url(#glowSoft)"/>
-    <text id="weekdayText" x="48.5" y="0"
+    <text id="weekdayText" x="48.5" y="2.1"
           fill="#a7f3c9"
           opacity="0.92"
           font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
@@ -580,7 +589,7 @@
           font-weight="600"
           letter-spacing="0.8"
           text-anchor="middle"
-          dominant-baseline="central"
+          dominant-baseline="alphabetic"
           filter="url(#glow)">MON</text>
     <text id="dateText" x="65.5" y="0"
           fill="#a7f3c9"
@@ -615,34 +624,29 @@
 
   <!-- ================= HANDS ================= -->
   <g id="hands" class="hands" filter="url(#glow)">
+    <g id="h24Hand">
+      <path d="M0,-88.5 L2,-78.5 L-2,-78.5 Z" fill="#a7f3c9"/>
+      <circle cx="0" cy="-24.5" r="2" fill="#a7f3c9"/>
+    </g>
+
     <g id="hourHand">
-      <path d="M-3.6,10 L-2.1,-33 L0,-40 L2.1,-33 L3.6,10 Z"
+      <path d="M-3.6,10 L-2.1,-48.5 L0,-55.5 L2.1,-48.5 L3.6,10 Z"
             fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
-      <path d="M-1.5,5 L-0.85,-30 L0,-36 L0.85,-30 L1.5,5 Z"
+      <path d="M-1.5,5 L-0.85,-45.5 L0,-51.5 L0.85,-45.5 L1.5,5 Z"
             fill="#a7f3c9"/>
     </g>
 
     <g id="minHand">
-      <path d="M-3,10 L-2.1,-70 L0,-74 L2.1,-70 L3,10 Z"
+      <path d="M-3,10 L-2.1,-83.5 L0,-87.5 L2.1,-83.5 L3,10 Z"
             fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
-      <path d="M-1.5,5 L-0.85,-66.5 L0,-70.5 L0.85,-66.5 L1.5,5 Z"
+      <path d="M-1.5,5 L-0.85,-80 L0,-84 L0.85,-80 L1.5,5 Z"
             fill="#a7f3c9"/>
     </g>
 
-    <g id="h24Hand">
-      <path d="M-1.1,8 L-0.8,-58 L0.8,-58 L1.1,8 Z"
-            fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
-      <path d="M0,-74 L2,-57 L-2,-57 Z"
-            fill="#a7f3c9"
-            stroke="#2b302e"
-            stroke-width="0.4"
-            stroke-linejoin="round"/>
-    </g>
-
     <g id="secHand">
-      <path d="M-1.2,14 L-0.9,-70 L0,-74 L0.9,-70 L1.2,14 Z"
+      <path d="M-1.2,14 L-0.9,-83.5 L0,-87.5 L0.9,-83.5 L1.2,14 Z"
             fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
-      <path d="M-0.4,10 L-0.32,-67 L0,-70.5 L0.32,-67 L0.4,10 Z"
+      <path d="M-0.4,10 L-0.32,-80.5 L0,-84 L0.32,-80.5 L0.4,10 Z"
             fill="#a7f3c9"/>
     </g>
 
@@ -742,6 +746,10 @@
        text-anchor="middle"
        dominant-baseline="central"></g>
 
+    <!-- stationary outline delta (sits underneath the moving solid one) -->
+    <path class="deltaOutline" d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z"
+          fill="none" stroke="#bdf9d6" stroke-width="0.5" stroke-linejoin="miter"/>
+
     <g class="chronoDelta">
       <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
     </g>
@@ -772,7 +780,7 @@
           stroke-opacity="0.7"
           stroke-width="0.5"
           filter="url(#fGlowSoft)"/>
-    <text id="fWeekdayText" x="48.5" y="0"
+    <text id="fWeekdayText" x="48.5" y="2.1"
           fill="#a7f3c9"
           opacity="0.92"
           font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
@@ -780,7 +788,7 @@
           font-weight="600"
           letter-spacing="0.8"
           text-anchor="middle"
-          dominant-baseline="central"
+          dominant-baseline="alphabetic"
           filter="url(#fGlow)">MON</text>
     <text id="fDateText" x="65.5" y="0"
           fill="#a7f3c9"
@@ -815,34 +823,29 @@
 
   <!-- ================= HANDS ================= -->
   <g id="fHands" class="hands" filter="url(#fGlow)">
+    <g id="fH24Hand">
+      <path d="M0,-88.5 L2,-78.5 L-2,-78.5 Z" fill="#a7f3c9"/>
+      <circle cx="0" cy="-24.5" r="2" fill="#a7f3c9"/>
+    </g>
+
     <g id="fHourHand">
-      <path d="M-3.6,10 L-2.1,-33 L0,-40 L2.1,-33 L3.6,10 Z"
+      <path d="M-3.6,10 L-2.1,-48.5 L0,-55.5 L2.1,-48.5 L3.6,10 Z"
             fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
-      <path d="M-1.5,5 L-0.85,-30 L0,-36 L0.85,-30 L1.5,5 Z"
+      <path d="M-1.5,5 L-0.85,-45.5 L0,-51.5 L0.85,-45.5 L1.5,5 Z"
             fill="#a7f3c9"/>
     </g>
 
     <g id="fMinHand">
-      <path d="M-3,10 L-2.1,-70 L0,-74 L2.1,-70 L3,10 Z"
+      <path d="M-3,10 L-2.1,-83.5 L0,-87.5 L2.1,-83.5 L3,10 Z"
             fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
-      <path d="M-1.5,5 L-0.85,-66.5 L0,-70.5 L0.85,-66.5 L1.5,5 Z"
+      <path d="M-1.5,5 L-0.85,-80 L0,-84 L0.85,-80 L1.5,5 Z"
             fill="#a7f3c9"/>
     </g>
 
-    <g id="fH24Hand">
-      <path d="M-1.1,8 L-0.8,-58 L0.8,-58 L1.1,8 Z"
-            fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
-      <path d="M0,-74 L2,-57 L-2,-57 Z"
-            fill="#a7f3c9"
-            stroke="#2b302e"
-            stroke-width="0.4"
-            stroke-linejoin="round"/>
-    </g>
-
     <g id="fSecHand">
-      <path d="M-1.2,14 L-0.9,-70 L0,-74 L0.9,-70 L1.2,14 Z"
+      <path d="M-1.2,14 L-0.9,-83.5 L0,-87.5 L0.9,-83.5 L1.2,14 Z"
             fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
-      <path d="M-0.4,10 L-0.32,-67 L0,-70.5 L0.32,-67 L0.4,10 Z"
+      <path d="M-0.4,10 L-0.32,-80.5 L0,-84 L0.32,-80.5 L0.4,10 Z"
             fill="#a7f3c9"/>
     </g>
 
