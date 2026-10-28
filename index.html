@@ -1,827 +1,2215 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>P74 Tools</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Poltergeist Watch</title>
+<link rel="icon" href="icon.ico"/>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
-	
-	<link rel="icon" href="icon.ico" />
+<!-- Tactical / military condensed font (Oswald) + monospaced brand font (Share Tech Mono) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
-    <style>
-    /* ── reset & base ── */
-    * {
+<style>
+  html, body {
+    height: 100%;
     margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-	}
+    background: #000;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    /* MOBILE FIX: stop the browser from turning drags into scroll / zoom /
+       pull-to-refresh (which fires pointercancel and kills the bezel drag) */
+    touch-action: none;
+    overscroll-behavior: none;
+    transition: background-color 0.25s ease;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-	:root {
-		font-size: 16px;
-		--bg: #000000;
-		--fg: #f0f0f0;
-		--dim: #666666;
-		--prompt: #33ff33;
-		--border: #222222;
-		--dot-red: #ff5f56;
-		--dot-yellow: #ffbd2e;
-		--dot-green: #27c93f;
-	}
+  /* ================= ZOOM / PAN CONTAINER ================= */
+  #stage {
+    display: block;
+    flex: none;
+    transform-origin: 50% 50%;     /* the dial centre; script sets translate + scale */
+    touch-action: none;
+  }
+  html.zoomed body     { cursor: grab; }
+  html.panning,
+  html.panning * { cursor: grabbing !important; }
 
-	html,
-	body {
-		height: 100%;
-		overflow: hidden;
-	}
+  /* ================= VIEW CONTAINERS ================= */
+  .watchSvg {
+    display: block;
+    height: auto;
+    /* MOBILE FIX: touch-action must be set on the <svg> root element;
+       many mobile browsers ignore it on SVG child elements */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  #watch     { width: min(94vw, 54vh);    aspect-ratio: 340 / 570; }  /* full watch on strap   */
+  #watchFace { width: min(94vmin, 840px); aspect-ratio: 1 / 1;     }  /* dial only             */
+  .watchSvg.is-hidden { display: none; }
 
-	body {
-		background: var(--bg);
-		color: var(--fg);
-		font-family: 'Share Tech Mono', monospace;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 2vw;
-		margin: 0;
-	}
+  /* ================= BEZEL TOUCH TARGETS ================= */
+  #bezelHit,
+  #fBezelHit {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+  }
 
-	/* ── terminal window ── */
-	.terminal {
-		width: 100%;
-		max-width: 840px;
-		height: 90vh;
-		max-height: 700px;
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		overflow: hidden;
-		/* removed box-shadow to eliminate glow */
-		display: flex;
-		flex-direction: column;
-	}
+  #compassBezelHit,
+  #compassTap {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+  }
 
-	/* ── title bar ── */
-	.titlebar {
-		display: flex;
-		align-items: center;
-		padding: 0.7rem 1.2rem;
-		background: #0a0a0a;
-		border-bottom: 1px solid var(--border);
-		user-select: none;
-		flex-shrink: 0;
-	}
+  /* inner rim strokes overlap the bezel hit band — let touches pass through */
+  #caseInnerRim { pointer-events: none; }
 
-	.titlebar .label {
-		font-size: 0.8rem;
-		color: var(--dim);
-		letter-spacing: 0.04em;
-		opacity: 0.7;
-		font-family: 'Share Tech Mono', monospace;
-	}
+  /* ================= CORNER BUTTONS ================= */
+  #modeToggle,
+  #viewToggle,
+  #backlightBtn {
+    position: fixed;
+    right: 16px;
+    z-index: 100;
+    width: 110px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+    background: #161616;
+    color: #c6fad9;
+    font-family: 'Oswald', 'Bahnschrift Condensed', 'DIN Condensed',
+                 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    -webkit-touch-callout: none;
+    touch-action: none;
+  }
+  #modeToggle   { top: 16px; right: auto; left: 16px; }
+  #viewToggle   { top: 58px; right: auto; left: 16px; }
+  #backlightBtn { top: 16px; }
 
-	.dots {
-		display: flex;
-		gap: 0.55rem;
-		margin-left: auto;
-		flex-shrink: 0;
-	}
+  /* ================= CHRONOGRAPH CORNER BUTTONS ================= */
+  #chronoStartBtn,
+  #chronoResetBtn {
+    position: fixed;
+    right: 16px;
+    z-index: 100;
+    width: 110px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+    background: #161616;
+    color: #c6fad9;
+    font-family: 'Oswald', 'Bahnschrift Condensed', 'DIN Condensed',
+                 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    -webkit-touch-callout: none;
+    touch-action: none;
+  }
+  #chronoStartBtn { top: 58px;  }
+  #chronoResetBtn { top: 100px; }
+  #chronoStartBtn:hover,
+  #chronoResetBtn:hover { background: #262626; }
+  #chronoStartBtn:active,
+  #chronoResetBtn:active { transform: translateY(1px); }
 
-	.dot {
-		width: 13px;
-		height: 13px;
-		border-radius: 50%;
-		display: block;
-		flex-shrink: 0;
-	}
-	.dot.red {
-		background: var(--dot-red);
-	}
-	.dot.yellow {
-		background: var(--dot-yellow);
-	}
-	.dot.green {
-		background: var(--dot-green);
-	}
+  html.light-mode #chronoStartBtn,
+  html.light-mode #chronoResetBtn {
+    background: #ffffff;
+    color: #111111;
+    border-color: #999999;
+  }
+  html.light-mode #chronoStartBtn:hover,
+  html.light-mode #chronoResetBtn:hover { background: #f0f0f0; }
 
-	/* ── output area ── */
-	.output {
-		flex: 1;
-		overflow-y: auto;
-		padding: 0.5rem 1.5rem 0.2rem 1.5rem;
-		background: var(--bg);
-		font-size: 1rem;
-		line-height: 1.6;
-		scroll-behavior: smooth;
-	}
+  /* chronograph pushers (full watch only) */
+  .pusher {
+    cursor: pointer;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pusher:focus { outline: none; }
 
-	.output::-webkit-scrollbar {
-		width: 6px;
-	}
-	.output::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.output::-webkit-scrollbar-thumb {
-		background: var(--border);
-		border-radius: 4px;
-	}
-	.output::-webkit-scrollbar-thumb:hover {
-		background: var(--dim);
-	}
+  #modeToggle:hover,
+  #viewToggle:hover,
+  #backlightBtn:hover { background: #262626; }
+  #modeToggle:active,
+  #viewToggle:active { transform: translateY(1px); }
 
-	/* ── sticky header (always visible) ── */
-	.sticky-header {
-		position: sticky;
-		top: 0;
-		background: var(--bg);
-		z-index: 2;
-		padding: 0.6rem 0 0.8rem 0;
-		border-bottom: 1px solid var(--border);
-		margin-bottom: 0.8rem;
-	}
+  /* backlight button reads as "lit" while held */
+  #backlightBtn[aria-pressed="true"] {
+    background: #5fbcff;
+    border-color: #5fbcff;
+    color: #000000;
+  }
 
-	.sticky-header .title {
-		font-size: 1.8rem;
-		color: var(--fg);
-	}
-	.sticky-header .title span {
-		color: var(--prompt);
-	}
-	.sticky-header .hint {
-		color: var(--dim);
-		font-size: 0.85rem;
-		margin-top: 0.4rem;
-		opacity: 0.6;
-	}
+  /* ================= CROWN (hold for backlight) ================= */
+  #crown {
+    cursor: pointer;
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+  #crown:focus { outline: none; }
+  #crown:focus-visible { outline: none; }
 
-	.sticky-header .cmd-grid {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.8rem 1.8rem;
-		margin-top: 0.7rem;
-		padding: 0.3rem 0;
-	}
+  /* ================= LIGHT MODE OVERRIDES ================= */
+  html.light-mode,
+  html.light-mode body {
+    background: #ffffff;
+  }
 
-	.sticky-header .cmd-grid a {
-		color: var(--fg);
-		text-decoration: none;
-		font-size: 1rem;
-		transition: color 0.2s;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-	}
+  html.light-mode #modeToggle,
+  html.light-mode #viewToggle,
+  html.light-mode #backlightBtn {
+    background: #ffffff;
+    color: #111111;
+    border-color: #999999;
+  }
+  html.light-mode #modeToggle:hover,
+  html.light-mode #viewToggle:hover,
+  html.light-mode #backlightBtn:hover { background: #f0f0f0; }
 
-	.sticky-header .cmd-grid a .prompt-symbol {
-		color: var(--prompt);
-		font-weight: 400;
-	}
+  html.light-mode #backlightBtn[aria-pressed="true"] {
+    background: #5fbcff;
+    border-color: #5fbcff;
+    color: #000000;
+  }
 
-	.sticky-header .cmd-grid a:hover {
-		color: var(--prompt);
-	}
+  /* turn off every glow filter */
+  html.light-mode .watchSvg [filter] {
+    filter: none;
+  }
 
-	.sticky-header .cmd-grid a .cmd-name {
-		border-bottom: 1px solid transparent;
-		transition: border-color 0.2s;
-	}
-	.sticky-header .cmd-grid a:hover .cmd-name {
-		border-bottom-color: var(--prompt);
-	}
+  /* green fills → white */
+  html.light-mode .watchSvg [fill="#a7f3c9"],
+  html.light-mode .watchSvg [fill="#b6f7d0"],
+  html.light-mode .watchSvg [fill="#bdf9d6"],
+  html.light-mode .watchSvg [fill="#79d6a3"],
+  html.light-mode .watchSvg [fill="#c6fad9"],
+  html.light-mode .watchSvg [fill="#9fe9c2"],
+  html.light-mode .watchSvg [fill="#c9fbd9"] {
+    fill: #ffffff;
+  }
 
-	.sticky-header .cmd-grid a .cmd-desc {
-		color: var(--dim);
-		font-size: 0.8rem;
-		margin-left: 0.3rem;
-	}
-	.sticky-header .cmd-grid a:hover .cmd-desc {
-		color: var(--dim);
-	}
+  /* green strokes → white */
+  html.light-mode .watchSvg [stroke="#a7f3c9"],
+  html.light-mode .watchSvg [stroke="#bdf9d6"],
+  html.light-mode .watchSvg [stroke="#79d6a3"],
+  html.light-mode .watchSvg [stroke="#9fe9c2"],
+  html.light-mode .watchSvg [stroke="#c9fbd9"] {   /* #c9fbd9: compass lubber line (top indicator) */
+    stroke: #ffffff;
+  }
 
-	/* ── dynamic lines ── */
-	.output .line {
-		white-space: pre-wrap;
-		word-break: break-word;
-		padding: 0.05rem 0;
-	}
+  /* ================= BACKLIGHT (electroluminescent dial) ================= */
+  html.backlight .dialBg { fill: #5fbcff !important; }
 
-	.output .line.prompt-line {
-		color: var(--fg);
-	}
+  html.backlight .faceMarkings * {
+    fill: #000000 !important;
+    stroke: #000000 !important;
+    fill-opacity: 1 !important;
+    stroke-opacity: 1 !important;
+    opacity: 1 !important;
+  }
 
-	.output .line.prompt-line .prompt-symbol {
-		color: var(--prompt);
-	}
+  /* stationary outline delta: keep it an outline in backlight mode */
+  html.backlight .faceMarkings .deltaOutline {
+    fill: none !important;
+  }
 
-	.output .line.output-line {
-		color: var(--fg);
-		padding-left: 0.5rem;
-	}
+  /* inner ring: circles are OUTLINES — keep fill:none so they don't become
+     black discs covering the 12h / 24h / decimal hour numerals. */
+  html.backlight .innerRing circle {
+    fill: none !important;
+    stroke: #000000 !important;
+    stroke-opacity: 1 !important;
+    opacity: 1 !important;
+  }
+  html.backlight .innerRing line {
+    stroke: #000000 !important;
+    stroke-opacity: 1 !important;
+    opacity: 1 !important;
+  }
 
-	.output .line.output-line.dim {
-		color: var(--dim);
-	}
+  /* hands: luminous inserts and centre pin go black */
+  html.backlight .hands [fill="#a7f3c9"],
+  html.backlight .hands [fill="#c9fbd9"] {
+    fill: #000000 !important;
+  }
 
-	.output .line.output-line.error {
-		color: #ff6b6b;
-	}
+  /* date window: lit blue background, solid black frame and text */
+  html.backlight .dateWindow .dwHalf {
+    fill: #5fbcff !important;
+    stroke: none !important;
+  }
+  html.backlight .dateWindow .dwFrame {
+    fill: none !important;
+    stroke: #000000 !important;
+    stroke-opacity: 1 !important;
+  }
+  html.backlight .dateWindow text {
+    fill: #000000 !important;
+    opacity: 1 !important;
+  }
 
-	.output .line.output-line.success {
-		color: var(--prompt);
-	}
-
-	.output .line.output-line.help {
-		color: var(--fg);
-	}
-
-	.output .line.output-line.help .cmd-name {
-		color: #66d9ff;
-	}
-
-	.output .line.output-line.help .cmd-desc {
-		color: var(--dim);
-	}
-
-	/* ── input line ── */
-	.input-line {
-		display: flex;
-		align-items: center;
-		padding: 0.6rem 1.5rem 1.2rem 1.5rem;
-		background: var(--bg);
-		border-top: 1px solid var(--border);
-		flex-shrink: 0;
-		gap: 0.6rem;
-	}
-
-	.input-line .prompt {
-		color: var(--prompt);
-		font-size: 1rem;
-		font-family: 'Share Tech Mono', monospace;
-		flex-shrink: 0;
-	}
-
-	.input-line #command-input {
-		flex: 1;
-		background: transparent;
-		border: none;
-		outline: none;
-		color: var(--fg);
-		font-family: 'Share Tech Mono', monospace;
-		font-size: 1rem;
-		padding: 0.1rem 0;
-		caret-color: var(--prompt);
-		min-width: 0;
-	}
-
-	.input-line #command-input::selection {
-		background: rgba(51, 255, 51, 0.25);
-	}
-
-	/* ── responsive ── */
-	@media (max-width: 640px) {
-		:root {
-			font-size: 14px;
-		}
-		/* Add margins on mobile – body padding increased */
-		body {
-			padding: 3vh 3vw;
-		}
-		.terminal {
-			max-height: 88vh;
-			height: 88vh;
-			border-radius: 8px;
-		}
-		.output {
-			padding: 0.3rem 1rem 0.2rem 1rem;
-		}
-		.input-line {
-			padding: 0.4rem 1rem 0.8rem 1rem;
-		}
-		.titlebar {
-			padding: 0.5rem 0.8rem;
-		}
-		.dot {
-			width: 10px;
-			height: 10px;
-		}
-		.titlebar .label {
-			font-size: 0.65rem;
-		}
-		.sticky-header .title {
-			font-size: 1.4rem;
-		}
-		.sticky-header .cmd-grid {
-			gap: 0.4rem 1rem;
-		}
-		.sticky-header .cmd-grid a {
-			font-size: 0.9rem;
-		}
-		.sticky-header .cmd-grid a .cmd-desc {
-			display: none;
-		}
-	}
-
-	@media (max-width: 400px) {
-		:root {
-			font-size: 12px;
-		}
-		body {
-			padding: 2.5vh 2.5vw;
-		}
-		.terminal {
-			max-height: 85vh;
-			height: 85vh;
-			border-radius: 6px;
-		}
-		.output {
-			padding: 0.2rem 0.6rem 0.2rem 0.6rem;
-		}
-		.input-line {
-			padding: 0.3rem 0.6rem 0.6rem 0.6rem;
-		}
-		.sticky-header .title {
-			font-size: 1.2rem;
-		}
-		.sticky-header .cmd-grid a {
-			font-size: 0.8rem;
-		}
-	}
-
-	@media print {
-		body {
-			background: white;
-			padding: 1rem;
-		}
-		.terminal {
-			border-color: #ccc;
-			box-shadow: none;
-			height: auto;
-			max-height: none;
-			border-radius: 4px;
-		}
-		.titlebar {
-			background: #eee;
-			border-color: #ccc;
-		}
-		.titlebar .label {
-			color: #555;
-		}
-		.dot {
-			border: 1px solid #999;
-			background: #ccc !important;
-		}
-		.output {
-			background: white;
-			color: black;
-			overflow: visible;
-			padding: 1rem;
-		}
-		.sticky-header {
-			background: white;
-			border-color: #ccc;
-		}
-		.sticky-header .title {
-			color: black;
-		}
-		.sticky-header .title span {
-			color: #006600;
-		}
-		.sticky-header .hint {
-			color: #555;
-		}
-		.sticky-header .cmd-grid a {
-			color: black;
-		}
-		.sticky-header .cmd-grid a .prompt-symbol {
-			color: #006600;
-		}
-		.sticky-header .cmd-grid a .cmd-desc {
-			color: #555;
-		}
-		.sticky-header .cmd-grid a:hover .cmd-name {
-			border-bottom-color: #006600;
-		}
-		.output .line {
-			color: black !important;
-		}
-		.output .line.prompt-line .prompt-symbol {
-			color: #006600 !important;
-		}
-		.output .line.output-line.dim {
-			color: #555 !important;
-		}
-		.output .line.output-line.error {
-			color: #cc0000 !important;
-		}
-		.output .line.output-line.success {
-			color: #006600 !important;
-		}
-		.output .line.output-line.help .cmd-name {
-			color: #0055aa !important;
-		}
-		.output .line.output-line.help .cmd-desc {
-			color: #555 !important;
-		}
-		.input-line {
-			border-color: #ccc;
-			background: white;
-			padding: 0.5rem 1rem;
-		}
-		.input-line .prompt {
-			color: #006600 !important;
-		}
-		.input-line #command-input {
-			color: black;
-			caret-color: black;
-		}
-		.input-line #command-input::selection {
-			background: #ccc;
-		}
-	}
-    </style>
+  /* halos make no sense on a lit dial — switch them off */
+  html.backlight .faceMarkings,
+  html.backlight .innerRing,
+  html.backlight .hands,
+  html.backlight .dateWindow rect,
+  html.backlight .dateWindow text { filter: none !important; }
+</style>
 </head>
-
 <body>
 
-    <div class="terminal">
+<button id="modeToggle"   type="button" aria-pressed="false">Light</button>
+<button id="viewToggle"   type="button" aria-pressed="false">Watch Face</button>
+<button id="backlightBtn" type="button" aria-pressed="false">Backlight</button>
+<button id="chronoStartBtn" type="button">Start</button>
+<button id="chronoResetBtn" type="button">Reset</button>
 
-        <!-- title bar -->
-        <div class="titlebar">
-            <span class="label">p74-tools</span>
-            <span class="dots">
-                <span class="dot red"></span>
-                <span class="dot yellow"></span>
-                <span class="dot green"></span>
-            </span>
-        </div>
+<!-- zoom / pan container: both views live inside it, the script scales and
+     moves this one element (the corner buttons stay outside, so they stay put) -->
+<div id="stage">
 
-        <!-- output -->
-        <div class="output" id="output"></div>
+<!-- =========================================================
+     VIEW 1 — FULL WATCH (default)
+     ========================================================= -->
+<svg id="watch" class="watchSvg" viewBox="-170 -285 340 570"
+     xmlns="http://www.w3.org/2000/svg"
+     shape-rendering="geometricPrecision">
 
-        <!-- input line -->
-        <div class="input-line">
-            <span class="prompt">$</span>
-            <input type="text" id="command-input" autofocus autocomplete="off" spellcheck="false" />
-        </div>
+  <defs>
+    <!-- bezel insert shading -->
+    <radialGradient id="bezelGrad" gradientUnits="userSpaceOnUse"
+                    cx="-47" cy="-55" r="150">
+      <stop offset="0%"   stop-color="#383838"/>
+      <stop offset="32%"  stop-color="#191919"/>
+      <stop offset="68%"  stop-color="#080808"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
 
-    </div>
+    <!-- crystal sheen -->
+    <radialGradient id="sheen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
 
-    <script>
-        (function() {
-            // ── DOM refs ──
-            const output = document.getElementById('output');
-            const input = document.getElementById('command-input');
+    <!-- knurled teeth shading -->
+    <radialGradient id="teethGrad" gradientUnits="userSpaceOnUse"
+                    cx="-45" cy="-55" r="210">
+      <stop offset="0%"   stop-color="#4d4d4d"/>
+      <stop offset="26%"  stop-color="#2a2a2a"/>
+      <stop offset="60%"  stop-color="#0e0e0e"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
 
-            // ── state ──
-            let history = [];
-            let historyIndex = -1;
+    <!-- case body -->
+    <radialGradient id="caseGrad" gradientUnits="userSpaceOnUse"
+                    cx="-45" cy="-55" r="180">
+      <stop offset="0%"   stop-color="#2c2c2c"/>
+      <stop offset="45%"  stop-color="#141414"/>
+      <stop offset="100%" stop-color="#020202"/>
+    </radialGradient>
 
-            // ── helpers ──
-            function scrollToBottom() {
-                output.scrollTop = output.scrollHeight;
-            }
+    <!-- lug steel -->
+    <linearGradient id="lugGrad" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0%"   stop-color="#3d3d3d"/>
+      <stop offset="42%"  stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#040404"/>
+    </linearGradient>
 
-            function appendLine(text, className = '') {
-                const div = document.createElement('div');
-                div.className = 'line ' + className;
-                div.innerHTML = text;
-                output.appendChild(div);
-                scrollToBottom();
-            }
+    <!-- crown steel (cylinder: light on top, dark at bottom) -->
+    <linearGradient id="crownGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#5a5a5a"/>
+      <stop offset="16%"  stop-color="#383838"/>
+      <stop offset="48%"  stop-color="#1a1a1a"/>
+      <stop offset="82%"  stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
 
-            function appendOutput(text, className = 'output-line') {
-                appendLine(text, className);
-            }
+    <!-- NATO webbing -->
+    <pattern id="natoWeave" width="10" height="3.4" patternUnits="userSpaceOnUse">
+      <rect width="10" height="3.4" fill="#141414"/>
+      <rect y="0"   width="10" height="1.4" fill="#1f1f1f"/>
+      <rect y="1.4" width="10" height="0.7" fill="#0b0b0b"/>
+      <rect x="0" y="2.1" width="5" height="1.3" fill="#191919"/>
+      <rect x="5" y="2.1" width="5" height="1.3" fill="#161616"/>
+    </pattern>
 
-            function appendPrompt(cmd) {
-                appendLine(`<span class="prompt-symbol">$</span> ${cmd}`, 'prompt-line');
-            }
+    <linearGradient id="strapShade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0.9"/>
+      <stop offset="14%"  stop-color="#000000" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="86%"  stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.9"/>
+    </linearGradient>
 
-            // ── sticky header (always visible) ──
-            function buildStickyHeader() {
-                const header = document.createElement('div');
-                header.className = 'sticky-header';
-                header.id = 'sticky-header';
-                header.innerHTML = `
-                    <div class="title">P74 <span>Tools</span></div>
-                    <div class="cmd-grid">
-                        <a href="matrix.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">matrix</span>
-                            <span class="cmd-desc">polylingual matrix rain</span>
-                        </a>
-                        <a href="datetime.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">datetime</span>
-                            <span class="cmd-desc">decimal clock</span>
-                        </a>
-                        <a href="datetime-converter.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">time-converter</span>
-                            <span class="cmd-desc">time converter</span>
-                        </a>
-                        <a href="duodecimal.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">duodecimal</span>
-                            <span class="cmd-desc">duodecimal converter</span>
-                        </a>
-                        <a href="chronograph.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">chronograph</span>
-                            <span class="cmd-desc">chronograph</span>
-                        </a>
-                    </div>
-                    <div class="hint">Type <span style="color:var(--prompt)">help</span> for all commands · <span style="color:var(--prompt)">clear</span> to clear screen</div>
-                `;
-                return header;
-            }
+    <linearGradient id="fadeDown" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeUp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.95"/>
+    </linearGradient>
 
-            function renderStickyHeader() {
-                const old = document.getElementById('sticky-header');
-                if (old) old.remove();
-                const header = buildStickyHeader();
-                output.prepend(header);
-                scrollToBottom();
-            }
+    <!-- clip used to keep the crown fluting inside the cylinder body -->
+    <clipPath id="crownClip">
+      <rect x="120" y="-13.5" width="18" height="27" rx="4"/>
+    </clipPath>
 
-            // ── command logic ──
-            function processCommand(cmd) {
-                const trimmed = cmd.trim();
+    <!-- compass case + knurled rim shading (local to the compass group) -->
+    <radialGradient id="compassCaseGrad" gradientUnits="userSpaceOnUse"
+                    cx="-16" cy="-20" r="74">
+      <stop offset="0%"   stop-color="#2c2c2c"/>
+      <stop offset="45%"  stop-color="#141414"/>
+      <stop offset="100%" stop-color="#020202"/>
+    </radialGradient>
+    <radialGradient id="compassTeethGrad" gradientUnits="userSpaceOnUse"
+                    cx="-16" cy="-20" r="80">
+      <stop offset="0%"   stop-color="#4d4d4d"/>
+      <stop offset="26%"  stop-color="#2a2a2a"/>
+      <stop offset="60%"  stop-color="#0e0e0e"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
 
-                if (trimmed === '') {
-                    appendPrompt('');
-                    return;
-                }
+    <clipPath id="dialClip"><circle r="91"/></clipPath>
 
-                appendPrompt(trimmed);
+    <filter id="glow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
 
-                const lower = trimmed.toLowerCase();
+    <filter id="glowSoft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
 
-                // ---- new commands ----
-                // cat (alone or with arguments)
-                if (lower === 'cat' || lower.startsWith('cat ')) {
-                    appendOutput('Meow', 'output-line');
-                    return;
-                }
+  <!-- ================= BLACK NATO STRAP ================= -->
+  <g id="strap">
+    <rect x="-52" y="-300" width="104" height="600" fill="url(#natoWeave)"/>
+    <rect x="-52" y="-300" width="104" height="600" fill="url(#strapShade)"/>
 
-                // touch (alone or with arguments)
-                if (lower === 'touch' || lower.startsWith('touch ')) {
-                    appendOutput('permission denied', 'output-line error');
-                    return;
-                }
+    <!-- edge stitching -->
+    <line x1="-45" y1="-300" x2="-45" y2="300"
+          stroke="#3d3d3d" stroke-opacity="0.55" stroke-width="0.9"
+          stroke-dasharray="3.2 2.6"/>
+    <line x1="45" y1="-300" x2="45" y2="300"
+          stroke="#3d3d3d" stroke-opacity="0.55" stroke-width="0.9"
+          stroke-dasharray="3.2 2.6"/>
 
-                // uname (exact match only)
-                if (lower === 'uname') {
-                    appendOutput('P74', 'output-line');
-                    return;
-                }
+    <!-- woven edge rails -->
+    <line x1="-51.6" y1="-300" x2="-51.6" y2="300" stroke="#2e2e2e" stroke-width="0.9"/>
+    <line x1="51.6"  y1="-300" x2="51.6"  y2="300" stroke="#2e2e2e" stroke-width="0.9"/>
 
-                // whoami (exact match only)
-                if (lower === 'whoami') {
-                    appendOutput('Pouyan', 'output-line');
-                    return;
-                }
+    <!-- depth fade into the darkness -->
+    <rect x="-52" y="-300" width="104" height="90" fill="url(#fadeDown)"/>
+    <rect x="-52" y="210"  width="104" height="90" fill="url(#fadeUp)"/>
 
-                // man (alone or with argument)
-                if (lower === 'man' || lower.startsWith('man ')) {
-                    let arg = '';
-                    if (lower === 'man') {
-                        arg = '';
-                    } else {
-                        // extract the argument after the space (preserve original case)
-                        const spaceIndex = trimmed.indexOf(' ');
-                        if (spaceIndex !== -1) {
-                            arg = trimmed.substring(spaceIndex + 1);
-                        } else {
-                            // fallback (should not happen)
-                            arg = '';
-                        }
-                    }
-                    appendOutput(`= woman${arg ? ' ' + arg : ''}`, 'output-line');
-                    return;
-                }
-				
-				// woman (alone or with argument)
-                if (lower === 'woman' || lower.startsWith('woman ')) {
-                    let arg = '';
-                    if (lower === 'woman') {
-                        arg = '';
-                    } else {
-                        // extract the argument after the space (preserve original case)
-                        const spaceIndex = trimmed.indexOf(' ');
-                        if (spaceIndex !== -1) {
-                            arg = trimmed.substring(spaceIndex + 1);
-                        } else {
-                            // fallback (should not happen)
-                            arg = '';
-                        }
-                    }
-                    appendOutput(`= man${arg ? ' ' + arg : ''}`, 'output-line');
-                    return;
-                }
+    <!-- ================= PATCH RIBBON (top strap) =================
+         Black ribbon, 104 wide (= compass diameter = strap width), mirrored
+         to the compass position (centre y = -186). Drawn after the fades so
+         it is not dimmed. Not part of .faceMarkings / .hands, so neither the
+         light-mode nor the backlight styling touches it. -->
+    <g id="patchRibbon">
+      <rect x="-52" y="-214" width="104" height="56" fill="#020202"/>
+      <!-- ribbon edges -->
+      <line x1="-52" y1="-213.6" x2="52" y2="-213.6" stroke="#303030" stroke-width="0.8"/>
+      <line x1="-52" y1="-158.4" x2="52" y2="-158.4" stroke="#303030" stroke-width="0.8"/>
+      <!-- stitching -->
+      <line x1="-52" y1="-211" x2="52" y2="-211"
+            stroke="#4a4a4a" stroke-opacity="0.6" stroke-width="0.6"
+            stroke-dasharray="2.6 2.2"/>
+      <line x1="-52" y1="-161" x2="52" y2="-161"
+            stroke="#4a4a4a" stroke-opacity="0.6" stroke-width="0.6"
+            stroke-dasharray="2.6 2.2"/>
 
-                // Navigation commands – redirect immediately
-                const navCommands = {
-                    'matrix': 'matrix.html',
-                    'datetime': 'datetime.html',
-                    'time-converter': 'datetime-converter.html',
-                    'duodecimal': 'duodecimal.html',
-                    'chronograph': 'chronograph.html',
-                };
+      <!-- patch 1 : US Army 1st Lieutenant (single silver bar, gray on black) -->
+      <g id="patchRank" transform="translate(-25,-186)">
+        <rect x="-21" y="-21" width="42" height="42" rx="2"
+              fill="#000000" stroke="#3a3a3a" stroke-width="0.8"/>
+        <rect x="-18.6" y="-18.6" width="37.2" height="37.2" rx="1"
+              fill="none" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="-4.5" y="-12" width="9" height="24" rx="0.6" fill="#9c9c9c"/>
+        <rect x="-3.2" y="-10.7" width="6.4" height="21.4" rx="0.3"
+              fill="none" stroke="#000000" stroke-opacity="0.35" stroke-width="0.5"/>
+      </g>
 
-                if (navCommands[lower]) {
-                    window.location.href = navCommands[lower];
-                    return;
-                }
+      <!-- patch 2 : blood type +O -->
+      <g id="patchBlood" transform="translate(25,-186)">
+        <rect x="-21" y="-21" width="42" height="42" rx="2"
+              fill="#000000" stroke="#3a3a3a" stroke-width="0.8"/>
+        <rect x="-18.6" y="-18.6" width="37.2" height="37.2" rx="1"
+              fill="none" stroke="#8c8c8c" stroke-width="1"/>
+        <text id="bloodText" x="0" y="1"
+              fill="#9c9c9c"
+              font-family="'Oswald', 'Bahnschrift Condensed', 'DIN Condensed', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+              font-size="21" font-weight="700"
+              text-anchor="middle" dominant-baseline="central">+O</text>
+      </g>
+    </g>
 
-                // System / easter egg commands
-                switch (lower) {
-                    case 'exit':
-                        appendOutput('→ closing tab …', 'output-line dim');
-                        setTimeout(() => {
-                            try {
-                                window.close();
-                            } catch (_) {
-                                appendOutput('⚠️  Cannot close tab programmatically. Please close it manually (Ctrl+W / Cmd+W).',
-                                    'output-line error');
-                            }
-                        }, 200);
-                        break;
+    <!-- keeper loop (moved down to make room for the compass) -->
+    <g transform="translate(0,46)">
+      <rect x="-55" y="196" width="110" height="13" rx="2.6"
+            fill="#1b1b1b" stroke="#313131" stroke-width="0.7"/>
+      <rect x="-55" y="196" width="110" height="2.4" rx="1.2"
+            fill="#2c2c2c" opacity="0.85"/>
+      <rect x="-55" y="206.4" width="110" height="2.6" rx="1.2"
+            fill="#050505" opacity="0.85"/>
+    </g>
+  </g>
 
-                    case 'help':
-                        appendOutput('', '');
-                        appendOutput('Available commands:', 'output-line help');
-                        appendOutput('  <span class="cmd-name">matrix</span>            <span class="cmd-desc">Polylingual Matrix Rain</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">datetime</span>          <span class="cmd-desc">Decimal Clock</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">time-converter</span>    <span class="cmd-desc">Time Converter</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">duodecimal</span>        <span class="cmd-desc">Duodecimal Converter</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">chronograph</span>       <span class="cmd-desc">Chronograph</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">cat</span>               <span class="cmd-desc">Concatenate files</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">man</span>               <span class="cmd-desc">Reference manuals</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">touch</span>             <span class="cmd-desc">Change file timestamps</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">uname</span>             <span class="cmd-desc">Print system name</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">whoami</span>            <span class="cmd-desc">Print current user</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">clear</span>             <span class="cmd-desc">Clear the terminal screen</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">exit</span>              <span class="cmd-desc">Close the tab</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">help</span>              <span class="cmd-desc">Show this help</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">pwd</span>               <span class="cmd-desc">Print working directory</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">ls</span>                <span class="cmd-desc">List directory contents</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">cd</span>                <span class="cmd-desc">Change directory</span>',
-                            'output-line help');
-                        appendOutput('', '');
-                        break;
+  <!-- ================= LUGS (black steel) ================= -->
+  <g id="lugs" fill="url(#lugGrad)"
+     stroke="#4a4a4a" stroke-opacity="0.42" stroke-width="0.7"
+     stroke-linejoin="round">
+    <path id="lugShape"
+          d="M51,-108
+             L51,-141
+             Q51.2,-145.6 55.8,-145.6
+             L61.8,-145.6
+             Q66.4,-145.6 66.8,-140.8
+             C68.5,-130 72,-113 78,-97
+             L86,-86
+             L86,-52
+             L51,-52 Z"/>
+    <use href="#lugShape" transform="scale(-1,1)"/>
+    <use href="#lugShape" transform="rotate(180)"/>
+    <use href="#lugShape" transform="scale(-1,1) rotate(180)"/>
+  </g>
 
-                    case 'clear':
-                        const header = document.getElementById('sticky-header');
-                        output.innerHTML = '';
-                        if (header) {
-                            output.appendChild(header);
-                        } else {
-                            renderStickyHeader();
-                        }
-                        scrollToBottom();
-                        break;
+  <!-- ================= COMPASS (lower strap, full watch only) =================
+       Ø 104 = strap width. Deliberately NOT part of .faceMarkings / .dialBg /
+       .hands, so the backlight styling never touches it. It lives in the
+       #watch SVG, so it disappears together with it in Watch Face view. -->
+  <g id="compass" transform="translate(0,186)">
+    <!-- static case -->
+    <circle id="compassCase" r="52" fill="url(#compassCaseGrad)"/>
+    <circle r="51.2" fill="none" stroke="#3a3a3a" stroke-opacity="0.5" stroke-width="0.5"/>
+    <circle r="52"   fill="none" stroke="#565656" stroke-opacity="0.45" stroke-width="0.7"/>
 
-                    case 'pwd':
-                        appendOutput('/ir/01001010/index', 'output-line dim');
-                        break;
+    <!-- rotating bezel (drag it) -->
+    <g id="compassBezel">
+      <g id="compassTeeth"></g>
+      <circle r="45"   fill="none" stroke="#050505" stroke-width="7.8"/>
+      <circle r="48.9" fill="none" stroke="#202020" stroke-width="0.45"/>
+      <circle r="41.1" fill="none" stroke="#202020" stroke-width="0.45"/>
+      <g id="compassBezelMarks" filter="url(#glowSoft)"></g>
+    </g>
 
-                    case 'ls':
-                        appendOutput('permission denied', 'output-line error');
-                        break;
+    <!-- bezel touch target (ring only, so the dial centre stays free for taps) -->
+    <circle id="compassBezelHit" r="46" fill="none"
+            stroke="#000000" stroke-opacity="0" stroke-width="9"
+            pointer-events="all"
+            style="cursor:grab; touch-action:none;"/>
 
-                    case 'cd':
-                        appendOutput('permission denied', 'output-line error');
-                        break;
+    <!-- dial -->
+    <circle r="40.8" fill="#000000"/>
+    <circle r="40.8" fill="none" stroke="#171b19" stroke-width="0.6"/>
 
-                    default:
-                        appendOutput(`"${trimmed}": command not found`, 'output-line error');
-                        break;
-                }
-            }
+    <!-- compass card: the only part that turns with the heading -->
+    <g id="compassCard" filter="url(#glowSoft)">
+      <g id="compassCardMarks"></g>
+    </g>
 
-            // ── input handling ──
-            function handleSubmit() {
-                const cmd = input.value;
-                if (cmd === undefined || cmd === null) return;
+    <!-- two parallel bearing lines, N-S axis. Spaced by the width of the north
+         delta (4.6), clear of the N and S letters. They follow the BEZEL angle,
+         not the compass card. -->
+    <g id="compassBezelLines" filter="url(#glowSoft)" pointer-events="none">
+      <line x1="-2.3" y1="-21.6" x2="-2.3" y2="21.6"
+            stroke="#bdf9d6" stroke-width="0.7" stroke-linecap="butt"/>
+      <line x1="2.3"  y1="-21.6" x2="2.3"  y2="21.6"
+            stroke="#bdf9d6" stroke-width="0.7" stroke-linecap="butt"/>
+    </g>
 
-                const trimmed = cmd.trim();
-                if (trimmed !== '') {
-                    history.push(cmd);
-                    historyIndex = history.length;
-                } else {
-                    historyIndex = history.length;
-                }
+    <!-- fixed lubber line (stays at the top of the case) -->
+    <line x1="0" y1="-36.6" x2="0" y2="-40.8"
+          stroke="#c9fbd9" stroke-width="1" stroke-linecap="butt"/>
 
-                input.value = '';
-                processCommand(cmd);
-                historyIndex = history.length;
-            }
+    <ellipse cx="-12" cy="-20" rx="26" ry="16" fill="url(#sheen)" pointer-events="none"/>
 
-            // ── keyboard events ──
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSubmit();
-                    return;
-                }
+    <!-- tap target on the dial: asks for sensor permission when needed -->
+    <circle id="compassTap" r="36" fill="#000000" fill-opacity="0"
+            pointer-events="all"/>
+  </g>
 
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (history.length === 0) return;
-                    if (historyIndex > 0) {
-                        historyIndex--;
-                        input.value = history[historyIndex];
-                    }
-                    setTimeout(() => {
-                        input.selectionStart = input.selectionEnd = input.value.length;
-                    }, 0);
-                    return;
-                }
+  <!-- ================= CYLINDRICAL PILOT CROWN (hold = backlight) ================= -->
+  <g id="crown" tabindex="0" role="button"
+     aria-label="Backlight" aria-pressed="false">
+    <!-- crown tube (hidden inside the case) -->
+    <rect x="108" y="-6" width="18" height="12" fill="#0c0c0c"/>
+    <rect x="108" y="-6" width="18" height="2.2" fill="#242424"/>
 
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (history.length === 0) return;
-                    if (historyIndex < history.length - 1) {
-                        historyIndex++;
-                        input.value = history[historyIndex];
-                    } else {
-                        historyIndex = history.length;
-                        input.value = '';
-                    }
-                    setTimeout(() => {
-                        input.selectionStart = input.selectionEnd = input.value.length;
-                    }, 0);
-                    return;
-                }
+    <!-- cylinder body: width 18, height 27 -->
+    <rect x="120" y="-13.5" width="18" height="27" rx="4"
+          fill="url(#crownGrad)"
+          stroke="#4d4d4d" stroke-opacity="0.5" stroke-width="0.7"/>
 
-                // Ctrl+L / Cmd+L → clear
-                if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
-                    e.preventDefault();
-                    const header = document.getElementById('sticky-header');
-                    output.innerHTML = '';
-                    if (header) {
-                        output.appendChild(header);
-                    } else {
-                        renderStickyHeader();
-                    }
-                    scrollToBottom();
-                }
-            });
+    <!-- vertical knurled fluting -->
+    <g id="crownFlutes" clip-path="url(#crownClip)"
+       stroke="#000000" stroke-opacity="0.55" stroke-width="1.5"
+       stroke-linecap="butt"></g>
 
-            // ── focus management ──
-            document.querySelector('.terminal').addEventListener('click', function(e) {
-                if (e.target.tagName !== 'INPUT') {
-                    input.focus();
-                }
-            });
+    <!-- specular highlight along the top of the cylinder -->
+    <line x1="122.5" y1="-11.4" x2="135.5" y2="-11.4"
+          stroke="#7a7a7a" stroke-opacity="0.55" stroke-width="1.2"
+          stroke-linecap="round" clip-path="url(#crownClip)"/>
 
-            input.addEventListener('blur', function() {
-                setTimeout(() => {
-                    if (document.activeElement !== input) {
-                        input.focus();
-                    }
-                }, 10);
-            });
+    <!-- shadow along the bottom of the cylinder -->
+    <line x1="122.5" y1="11.4" x2="135.5" y2="11.4"
+          stroke="#000000" stroke-opacity="0.6" stroke-width="1.4"
+          stroke-linecap="round" clip-path="url(#crownClip)"/>
 
-            // ── init ──
-            renderStickyHeader();
+    <!-- flat outer end cap edge -->
+    <line x1="137.4" y1="-12.2" x2="137.4" y2="12.2"
+          stroke="#5a5a5a" stroke-opacity="0.45" stroke-width="1"
+          stroke-linecap="round" clip-path="url(#crownClip)"/>
+  </g>
 
-            setTimeout(() => {
-                input.focus();
-            }, 100);
+  <!-- ================= CHRONOGRAPH PUSHERS (2 and 4 o'clock) ================= -->
+  <!-- each pusher is drawn along +x then rotated into place -->
+  <g id="pusherStart" class="pusher" transform="rotate(-30)"
+     tabindex="0" role="button" aria-label="Chronograph start">
+    <g class="pusherBody">
+      <rect x="108" y="-4" width="14" height="8" fill="#0c0c0c"/>
+      <rect x="118" y="-6.5" width="16" height="13" rx="3"
+            fill="url(#crownGrad)"
+            stroke="#4d4d4d" stroke-opacity="0.5" stroke-width="0.7"/>
+      <line x1="120.5" y1="-4.6" x2="131.5" y2="-4.6"
+            stroke="#7a7a7a" stroke-opacity="0.55" stroke-width="1" stroke-linecap="round"/>
+      <line x1="120.5" y1="4.6" x2="131.5" y2="4.6"
+            stroke="#000000" stroke-opacity="0.6" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="133.4" y1="-5" x2="133.4" y2="5"
+            stroke="#5a5a5a" stroke-opacity="0.45" stroke-width="0.9" stroke-linecap="round"/>
+    </g>
+    <!-- generous invisible touch target, kept outside the case circle -->
+    <rect x="122" y="-15" width="30" height="30" fill="#000000" fill-opacity="0"
+          pointer-events="all"/>
+  </g>
 
-            output.addEventListener('click', function() {
-                input.focus();
-            });
+  <g id="pusherReset" class="pusher" transform="rotate(30)"
+     tabindex="0" role="button" aria-label="Chronograph reset">
+    <g class="pusherBody">
+      <rect x="108" y="-4" width="14" height="8" fill="#0c0c0c"/>
+      <rect x="118" y="-6.5" width="16" height="13" rx="3"
+            fill="url(#crownGrad)"
+            stroke="#4d4d4d" stroke-opacity="0.5" stroke-width="0.7"/>
+      <line x1="120.5" y1="-4.6" x2="131.5" y2="-4.6"
+            stroke="#7a7a7a" stroke-opacity="0.55" stroke-width="1" stroke-linecap="round"/>
+      <line x1="120.5" y1="4.6" x2="131.5" y2="4.6"
+            stroke="#000000" stroke-opacity="0.6" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="133.4" y1="-5" x2="133.4" y2="5"
+            stroke="#5a5a5a" stroke-opacity="0.45" stroke-width="0.9" stroke-linecap="round"/>
+    </g>
+    <rect x="122" y="-15" width="30" height="30" fill="#000000" fill-opacity="0"
+          pointer-events="all"/>
+  </g>
 
-            console.log('⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯');
-            console.log('  P74 Tools terminal active');
-            console.log('  Type "help" for commands · "clear" to clear');
-            console.log('⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯');
+  <!-- ================= CASE BODY ================= -->
+  <g id="caseBody">
+    <circle r="122.6" fill="url(#caseGrad)"/>
+    <circle r="120.8" fill="none" stroke="#3a3a3a" stroke-opacity="0.5" stroke-width="0.6"/>
+    <circle r="122.6" fill="none" stroke="#565656" stroke-opacity="0.45" stroke-width="0.8"/>
+  </g>
 
-        })();
-    </script>
+  <!-- ================= ROTATING BEZEL ================= -->
+  <g id="bezelGroup">
+    <!-- flat-topped (trapezoid) knurled rim, generated in JS -->
+    <g id="bezelTeeth"></g>
+
+    <!-- bezel insert -->
+    <circle r="102.75" fill="none" stroke="#050505" stroke-width="19.5"/>
+    <circle r="112.2" fill="none" stroke="#202020" stroke-width="0.55"/>
+    <circle r="102.5" fill="none" stroke="#1c1c1c" stroke-opacity="0.35" stroke-width="0.3"/>
+    <circle r="93.1"  fill="none" stroke="#1c1c1c" stroke-opacity="0.6" stroke-width="0.4"/>
+
+    <g id="bezelMarks" filter="url(#glowSoft)"></g>
+  </g>
+
+  <!-- ================= BEZEL HIT AREA ================= -->
+  <circle id="bezelHit" r="106.2" fill="none"
+          stroke="#000000" stroke-opacity="0" stroke-width="32.6"
+          pointer-events="all"
+          style="cursor:grab; touch-action:none;"/>
+
+  <!-- ================= STATIC INNER RIM ================= -->
+  <g id="caseInnerRim">
+    <circle r="92"   fill="none" stroke="#0a0a0a" stroke-width="2"/>
+    <circle r="91.3" fill="none" stroke="#2e2e2e" stroke-opacity="0.6" stroke-width="0.5"/>
+    <circle r="92.9" fill="none" stroke="#2e2e2e" stroke-opacity="0.4" stroke-width="0.5"/>
+  </g>
+
+  <!-- ================= WATCH FACE ================= -->
+  <circle id="dialBg" class="dialBg" r="91" fill="#000000"/>
+  <circle r="91" fill="none" stroke="#171b19" stroke-width="0.8"/>
+
+  <!-- ================= INNER RING AROUND HOUR NUMERALS ================= -->
+  <g id="innerRing" class="innerRing" filter="url(#glowSoft)"></g>
+
+  <!-- ================= LUMINOUS MARKINGS ================= -->
+  <g id="faceMarkings" class="faceMarkings" filter="url(#glow)">
+    <g id="ticks" stroke="#a7f3c9" fill="none"></g>
+    <g id="medTicks" stroke="#a7f3c9" fill="none"></g>
+    <g id="msTicks" stroke="#79d6a3" stroke-opacity="0.38" fill="none"></g>
+    <g id="nums"
+       fill="#b6f7d0"
+       font-family="'Oswald', 'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+       text-anchor="middle"
+       dominant-baseline="central"></g>
+
+    <!-- stationary outline delta (sits underneath the moving solid one) -->
+    <path class="deltaOutline" d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z"
+          fill="none" stroke="#bdf9d6" stroke-width="0.5" stroke-linejoin="miter"/>
+
+    <g class="chronoDelta">
+      <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
+    </g>
+
+    <text x="0.25" y="-70"
+          fill="#bdf9d6"
+          font-family="'Share Tech Mono', 'Courier New', 'Lucida Console', monospace"
+          font-size="6.2"
+          letter-spacing="0.5"
+          text-anchor="middle"
+          dominant-baseline="central">POLTERGEIST</text>
+
+    <text x="0.15" y="-64.2"
+          fill="#a7f3c9"
+          opacity="0.85"
+          font-family="'Share Tech Mono', 'Courier New', 'Lucida Console', monospace"
+          font-size="3.8"
+          letter-spacing="0.3"
+          text-anchor="middle"
+          dominant-baseline="central">WR 300M - SOLAR</text>
+  </g>
+
+  <!-- ================= DATE WINDOW ================= -->
+  <g id="dateWindow" class="dateWindow">
+    <!-- two equal halves (17 wide each, centres at 48.5 / 65.5), no divider -->
+    <rect class="dwHalf" x="40"   y="-5.5" width="17.1" height="11" rx="1.2" fill="#000000"/>
+    <rect class="dwHalf" x="56.9" y="-5.5" width="17.1" height="11" rx="1.2" fill="#000000"/>
+    <rect class="dwFrame" x="40" y="-5.5" width="34" height="11" rx="1.2"
+          fill="none"
+          stroke="#bdf9d6"
+          stroke-opacity="0.7"
+          stroke-width="0.5"
+          filter="url(#glowSoft)"/>
+    <text id="weekdayText" x="48.5" y="2.1"
+          fill="#a7f3c9"
+          opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="6"
+          font-weight="600"
+          letter-spacing="0.8"
+          text-anchor="middle"
+          dominant-baseline="alphabetic"
+          filter="url(#glow)">MON</text>
+    <text id="dateText" x="65.5" y="0"
+          fill="#a7f3c9"
+          opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7"
+          font-weight="700"
+          text-anchor="middle"
+          dominant-baseline="central"
+          filter="url(#glow)">01</text>
+
+    <!-- chronograph read-out: HH : MM (hidden until started) -->
+    <text id="chronoHText" x="48.5" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#glow)">00</text>
+    <text id="chronoCText" x="57" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#glow)">:</text>
+    <text id="chronoMText" x="65.5" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#glow)">00</text>
+  </g>
+
+  <!-- ================= HANDS ================= -->
+  <g id="hands" class="hands" filter="url(#glow)">
+    <g id="h24Hand">
+      <path d="M0,-88.5 L2,-78.5 L-2,-78.5 Z" fill="#a7f3c9"/>
+      <circle cx="0" cy="-24.5" r="2" fill="#a7f3c9"/>
+    </g>
+
+    <g id="hourHand">
+      <path d="M-3.6,10 L-2.1,-48.5 L0,-55.5 L2.1,-48.5 L3.6,10 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
+      <path d="M-1.5,5 L-0.85,-45.5 L0,-51.5 L0.85,-45.5 L1.5,5 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <g id="minHand">
+      <path d="M-3,10 L-2.1,-83.5 L0,-87.5 L2.1,-83.5 L3,10 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
+      <path d="M-1.5,5 L-0.85,-80 L0,-84 L0.85,-80 L1.5,5 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <g id="secHand">
+      <path d="M-1.2,14 L-0.9,-83.5 L0,-87.5 L0.9,-83.5 L1.2,14 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
+      <path d="M-0.4,10 L-0.32,-80.5 L0,-84 L0.32,-80.5 L0.4,10 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <circle r="4.1" fill="#0a0a0a" stroke="#33393a" stroke-width="0.45"/>
+    <circle r="1.55" fill="#c9fbd9"/>
+  </g>
+
+  <!-- ================= CRYSTAL SHEEN ================= -->
+  <g clip-path="url(#dialClip)" pointer-events="none">
+    <ellipse cx="-28" cy="-46" rx="66" ry="42" fill="url(#sheen)"/>
+  </g>
+
+</svg>
+
+<!-- =========================================================
+     VIEW 2 — WATCH FACE ONLY
+     ========================================================= -->
+<svg id="watchFace" class="watchSvg is-hidden" viewBox="-122 -122 244 244"
+     xmlns="http://www.w3.org/2000/svg"
+     shape-rendering="geometricPrecision">
+
+  <defs>
+    <radialGradient id="fBezelGrad" gradientUnits="userSpaceOnUse"
+                    cx="-47" cy="-55" r="150">
+      <stop offset="0%"   stop-color="#383838"/>
+      <stop offset="32%"  stop-color="#191919"/>
+      <stop offset="68%"  stop-color="#080808"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <radialGradient id="fSheen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="fGlow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="fGlowSoft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <clipPath id="fDialClip"><circle r="91"/></clipPath>
+  </defs>
+
+  <!-- ================= FIXED METAL BEZEL RING ================= -->
+  <g id="fBezelStatic">
+    <circle r="103" fill="none" stroke="url(#fBezelGrad)" stroke-width="24"/>
+
+    <circle r="114.7" fill="none" stroke="#737373" stroke-opacity="0.42" stroke-width="0.7"/>
+    <circle r="113.6" fill="none" stroke="#000000" stroke-opacity="0.65" stroke-width="0.5"/>
+    <circle r="92.2"  fill="none" stroke="#000000" stroke-opacity="0.65" stroke-width="0.5"/>
+    <circle r="91.2"  fill="none" stroke="#000000" stroke-opacity="0.9"  stroke-width="0.9"/>
+  </g>
+
+  <!-- ================= ROTATING BEZEL INSERT ================= -->
+  <g id="fBezelGroup">
+    <circle r="102.75" fill="none" stroke="#000000" stroke-width="19.5"/>
+
+    <circle r="93.1"  fill="none" stroke="#1c1c1c" stroke-opacity="0.6" stroke-width="0.35"/>
+    <circle r="112.4" fill="none" stroke="#1c1c1c" stroke-opacity="0.6" stroke-width="0.35"/>
+    <circle r="102.5" fill="none" stroke="#1c1c1c" stroke-opacity="0.3" stroke-width="0.28"/>
+
+    <g id="fBezelMarks" filter="url(#fGlowSoft)"></g>
+  </g>
+
+  <!-- ================= BEZEL HIT AREA ================= -->
+  <circle id="fBezelHit" r="103" fill="none"
+          stroke="#000000" stroke-opacity="0" stroke-width="24"
+          pointer-events="all"
+          style="cursor:grab; touch-action:none;"/>
+
+  <!-- ================= WATCH FACE ================= -->
+  <circle id="fDialBg" class="dialBg" r="91" fill="#000000"/>
+  <circle r="91" fill="none" stroke="#171b19" stroke-width="0.8"/>
+
+  <!-- ================= INNER RING AROUND HOUR NUMERALS ================= -->
+  <g id="fInnerRing" class="innerRing" filter="url(#fGlowSoft)"></g>
+
+  <!-- ================= LUMINOUS MARKINGS ================= -->
+  <g id="fFaceMarkings" class="faceMarkings" filter="url(#fGlow)">
+    <g id="fTicks" stroke="#a7f3c9" fill="none"></g>
+    <g id="fMedTicks" stroke="#a7f3c9" fill="none"></g>
+    <g id="fMsTicks" stroke="#79d6a3" stroke-opacity="0.38" fill="none"></g>
+    <g id="fNums"
+       fill="#b6f7d0"
+       font-family="'Oswald', 'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+       text-anchor="middle"
+       dominant-baseline="central"></g>
+
+    <!-- stationary outline delta (sits underneath the moving solid one) -->
+    <path class="deltaOutline" d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z"
+          fill="none" stroke="#bdf9d6" stroke-width="0.5" stroke-linejoin="miter"/>
+
+    <g class="chronoDelta">
+      <path d="M0,-88.5 L5.2,-78.5 L-5.2,-78.5 Z" fill="#bdf9d6"/>
+    </g>
+
+    <text x="0.25" y="-70"
+          fill="#bdf9d6"
+          font-family="'Share Tech Mono', 'Courier New', 'Lucida Console', monospace"
+          font-size="6.2"
+          letter-spacing="0.5"
+          text-anchor="middle"
+          dominant-baseline="central">POLTERGEIST</text>
+
+    <text x="0.15" y="-64.2"
+          fill="#a7f3c9"
+          opacity="0.85"
+          font-family="'Share Tech Mono', 'Courier New', 'Lucida Console', monospace"
+          font-size="3.8"
+          letter-spacing="0.3"
+          text-anchor="middle"
+          dominant-baseline="central">WR 300M - SOLAR</text>
+  </g>
+
+  <!-- ================= DATE WINDOW ================= -->
+  <g id="fDateWindow" class="dateWindow">
+    <!-- two equal halves (17 wide each, centres at 48.5 / 65.5), no divider -->
+    <rect class="dwHalf" x="40"   y="-5.5" width="17.1" height="11" rx="1.2" fill="#000000"/>
+    <rect class="dwHalf" x="56.9" y="-5.5" width="17.1" height="11" rx="1.2" fill="#000000"/>
+    <rect class="dwFrame" x="40" y="-5.5" width="34" height="11" rx="1.2"
+          fill="none"
+          stroke="#bdf9d6"
+          stroke-opacity="0.7"
+          stroke-width="0.5"
+          filter="url(#fGlowSoft)"/>
+    <text id="fWeekdayText" x="48.5" y="2.1"
+          fill="#a7f3c9"
+          opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="6"
+          font-weight="600"
+          letter-spacing="0.8"
+          text-anchor="middle"
+          dominant-baseline="alphabetic"
+          filter="url(#fGlow)">MON</text>
+    <text id="fDateText" x="65.5" y="0"
+          fill="#a7f3c9"
+          opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7"
+          font-weight="700"
+          text-anchor="middle"
+          dominant-baseline="central"
+          filter="url(#fGlow)">01</text>
+
+    <!-- chronograph read-out: HH : MM (hidden until started) -->
+    <text id="fChronoHText" x="48.5" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#fGlow)">00</text>
+    <text id="fChronoCText" x="57" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#fGlow)">:</text>
+    <text id="fChronoMText" x="65.5" y="0" display="none"
+          fill="#a7f3c9" opacity="0.92"
+          font-family="'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+          font-size="7" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+          filter="url(#fGlow)">00</text>
+  </g>
+
+  <!-- ================= HANDS ================= -->
+  <g id="fHands" class="hands" filter="url(#fGlow)">
+    <g id="fH24Hand">
+      <path d="M0,-88.5 L2,-78.5 L-2,-78.5 Z" fill="#a7f3c9"/>
+      <circle cx="0" cy="-24.5" r="2" fill="#a7f3c9"/>
+    </g>
+
+    <g id="fHourHand">
+      <path d="M-3.6,10 L-2.1,-48.5 L0,-55.5 L2.1,-48.5 L3.6,10 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
+      <path d="M-1.5,5 L-0.85,-45.5 L0,-51.5 L0.85,-45.5 L1.5,5 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <g id="fMinHand">
+      <path d="M-3,10 L-2.1,-83.5 L0,-87.5 L2.1,-83.5 L3,10 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.45" stroke-linejoin="round"/>
+      <path d="M-1.5,5 L-0.85,-80 L0,-84 L0.85,-80 L1.5,5 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <g id="fSecHand">
+      <path d="M-1.2,14 L-0.9,-83.5 L0,-87.5 L0.9,-83.5 L1.2,14 Z"
+            fill="#000000" stroke="#2b302e" stroke-width="0.4" stroke-linejoin="round"/>
+      <path d="M-0.4,10 L-0.32,-80.5 L0,-84 L0.32,-80.5 L0.4,10 Z"
+            fill="#a7f3c9"/>
+    </g>
+
+    <circle r="4.1" fill="#0a0a0a" stroke="#33393a" stroke-width="0.45"/>
+    <circle r="1.55" fill="#c9fbd9"/>
+  </g>
+
+  <!-- ================= CRYSTAL SHEEN ================= -->
+  <g clip-path="url(#fDialClip)" pointer-events="none">
+    <ellipse cx="-28" cy="-46" rx="66" ry="42" fill="url(#fSheen)"/>
+  </g>
+
+</svg>
+
+</div><!-- /#stage -->
+
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const mk = (tag, attrs) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  };
+
+  /* drag-cancel hooks: the zoom gesture (pinch) calls these so a bezel that is
+     being turned by one finger lets go cleanly when a second finger arrives */
+  const cancelDrags = [];
+
+  const polar = (r, deg) => {
+    const a = deg * Math.PI / 180;
+    return [ +(Math.sin(a) * r).toFixed(3), +(-Math.cos(a) * r).toFixed(3) ];
+  };
+
+  /* =========================================================
+     INK CENTERING
+     Puts the *visible* glyph shapes (not the font's advance box) exactly on
+     a given centre point. This removes the offset caused by side bearings,
+     trailing letter-spacing and different fallback fonts. Measured with a
+     canvas at 40x scale, re-measured once the web fonts have loaded.
+     ========================================================= */
+  const inkCtx   = document.createElement('canvas').getContext('2d');
+  const INK_S    = 40;
+  let   inkGen   = 0;                        // bumped when fonts finish loading
+
+  function centerInk(el, cx, cy, vref) {
+    const str = el.textContent;
+    if (!str || !inkCtx) return;
+    const key = str + '|' + inkGen;
+    if (el._inkKey === key) return;
+    el._inkKey = key;
+
+    const fam    = el.getAttribute('font-family');
+    const size   = parseFloat(el.getAttribute('font-size'));
+    const weight = el.getAttribute('font-weight') || '400';
+    const sp     = parseFloat(el.getAttribute('letter-spacing')) || 0;
+
+    inkCtx.font         = weight + ' ' + (size * INK_S) + 'px ' + fam;
+    inkCtx.textAlign    = 'left';
+    inkCtx.textBaseline = 'alphabetic';
+
+    const first = inkCtx.measureText(str[0]);
+    const last  = inkCtx.measureText(str[str.length - 1]);
+    const pre   = str.length > 1 ? inkCtx.measureText(str.slice(0, -1)).width : 0;
+    const vm    = inkCtx.measureText(vref || str);
+
+    const inkL = -first.actualBoundingBoxLeft / INK_S;
+    const inkR = pre / INK_S + sp * (str.length - 1) + last.actualBoundingBoxRight / INK_S;
+    const inkT = vm.actualBoundingBoxAscent  / INK_S;      // above baseline
+    const inkB = vm.actualBoundingBoxDescent / INK_S;      // below baseline
+
+    if (![inkL, inkR, inkT, inkB].every(isFinite) || inkR <= inkL) return;
+
+    el.setAttribute('text-anchor', 'start');
+    el.setAttribute('dominant-baseline', 'alphabetic');
+    el.setAttribute('x', (cx - (inkL + inkR) / 2).toFixed(3));
+    el.setAttribute('y', (cy + (inkT - inkB) / 2).toFixed(3));
+  }
+
+  const DIGITS = '0123456789';
+  const CAPS   = 'MONTUEWDHFRISA';
+
+  /* things that never change their text: centre now and after fonts load */
+  function centerStatic() {
+    const blood = document.getElementById('bloodText');
+    if (blood) centerInk(blood, 0, 0);
+    ['chronoCText', 'fChronoCText'].forEach(id => {
+      const e = document.getElementById(id);
+      if (e) centerInk(e, 57, 0, DIGITS);
+    });
+  }
+  centerStatic();
+
+  if (document.fonts) {
+    const refresh = () => { inkGen++; centerStatic(); };
+    Promise.all([
+      document.fonts.load("700 23px 'Oswald'"),
+      document.fonts.load("600 12px 'Oswald'")
+    ]).then(refresh, () => {});
+    document.fonts.ready.then(refresh, () => {});
+    if (document.fonts.addEventListener)
+      document.fonts.addEventListener('loadingdone', refresh);
+  }
+  window.addEventListener('load', () => { inkGen++; centerStatic(); });
+
+  /* ================= TACTICAL FONT ================= */
+  const TACTICAL_FONT =
+    "'Oswald', 'Bahnschrift Condensed', 'DIN Condensed', 'Agency FB', " +
+    "'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+  /* ================= FULL WATCH : CROWN FLUTING ================= */
+  const crownFlutes = document.getElementById('crownFlutes');
+  if (crownFlutes) {
+    for (let x = 122.6; x <= 135.4; x += 2.56) {
+      crownFlutes.appendChild(mk('line', {
+        x1: +x.toFixed(2), y1: -12.5,
+        x2: +x.toFixed(2), y2: 12.5
+      }));
+    }
+  }
+
+  /* ================= FULL WATCH : TRAPEZOID BEZEL RIM ================= */
+  const bezelTeeth = document.getElementById('bezelTeeth');
+  if (bezelTeeth) {
+    const N_TEETH = 12;          // 12 flat-topped teeth
+    const R_TIP   = 119.8;       // crown of the tooth (flat top)
+    const R_ROOT  = 112.6;       // valley between teeth → narrow band
+    const PERIOD  = 360 / N_TEETH;
+
+    let toothPath = '';
+    for (let i = 0; i < N_TEETH; i++) {
+      const a0 = i * PERIOD;
+      const a1 = a0 + PERIOD * 0.25;
+      const a2 = a0 + PERIOD * 0.75;
+      const a3 = a0 + PERIOD;
+
+      const [x0, y0] = polar(R_ROOT, a0);
+      const [x1, y1] = polar(R_TIP,  a1);
+      const [x2, y2] = polar(R_TIP,  a2);
+      const [x3, y3] = polar(R_ROOT, a3);
+
+      toothPath += (i === 0 ? 'M' : 'L') + x0 + ',' + y0 + ' ';
+      toothPath += 'L' + x1 + ',' + y1 + ' ';
+      toothPath += 'L' + x2 + ',' + y2 + ' ';
+      toothPath += 'L' + x3 + ',' + y3 + ' ';
+    }
+    toothPath += 'Z';
+
+    bezelTeeth.appendChild(mk('path', {
+      d: toothPath,
+      fill: 'url(#teethGrad)',
+      stroke: '#3d3d3d',
+      'stroke-opacity': 0.5,
+      'stroke-width': 0.4,
+      'stroke-linejoin': 'miter'
+    }));
+  }
+
+  /* =========================================================
+     SHARED DIAL BUILDER (used by BOTH views)
+     ========================================================= */
+  function buildDial(els) {
+    const { ticks, medTicks, msTicks, innerRing, nums, bezelMarks } = els;
+
+    /* ---- HOUR / MINUTE TRACK ---- */
+    for (let i = 1; i < 60; i++) {
+      const five = i % 5 === 0;
+      const [x1, y1] = polar(five ? 77.5 : 82.5, i * 6);
+      const [x2, y2] = polar(86.5, i * 6);
+      ticks.appendChild(mk('line', {
+        x1, y1, x2, y2,
+        'stroke-width': five ? 1.5 : 0.55,
+        'stroke-linecap': 'butt'
+      }));
+    }
+
+    /* ---- MEDIAN TRACK ---- */
+    for (let i = 0; i < 12; i++) {
+      const deg = i * 30 + 15;
+      const [x1, y1] = polar(80, deg);
+      const [x2, y2] = polar(86.5, deg);
+      medTicks.appendChild(mk('line', {
+        x1, y1, x2, y2,
+        'stroke-width': 1.0,
+        'stroke-linecap': 'butt'
+      }));
+    }
+
+    /* ---- MILLISECOND LINES ---- */
+    const MS_SUB = 9;
+    for (let i = 0; i < 60; i++) {
+      for (let j = 1; j <= MS_SUB; j++) {
+        const deg = i * 6 + j * (6 / (MS_SUB + 1));
+        const [x1, y1] = polar(88.1, deg);
+        const [x2, y2] = polar(89.7, deg);
+        msTicks.appendChild(mk('line', {
+          x1, y1, x2, y2,
+          'stroke-width': 0.22,
+          'stroke-linecap': 'butt'
+        }));
+      }
+    }
+
+    /* ---- INNER RING ---- */
+    const ringR = 55.5;
+
+    innerRing.appendChild(mk('circle', {
+      r: ringR, fill: 'none', stroke: '#a7f3c9',
+      'stroke-opacity': 0.30, 'stroke-width': 0.45
+    }));
+
+    innerRing.appendChild(mk('circle', {
+      r: 24.5, fill: 'none', stroke: '#a7f3c9',
+      'stroke-opacity': 0.30, 'stroke-width': 0.45
+    }));
+
+    for (let i = 0; i < 60; i++) {
+      const deg = i * 6;
+      const isHour = i % 5 === 0;
+      const inner = isHour ? ringR - 3.4 : ringR - 1.8;
+      const [x1, y1] = polar(inner, deg);
+      const [x2, y2] = polar(ringR, deg);
+
+      innerRing.appendChild(mk('line', {
+        x1, y1, x2, y2,
+        stroke: '#a7f3c9',
+        'stroke-opacity': isHour ? 0.55 : 0.28,
+        'stroke-width': isHour ? 0.9 : 0.35,
+        'stroke-linecap': 'butt'
+      }));
+    }
+
+    /* ---- NUMERALS ---- */
+    nums.setAttribute('font-family', TACTICAL_FONT);
+
+    const label = (x, y, size, weight, opacity, fill, str) => {
+      const t = mk('text', {
+        x, y,
+        'font-size': size,
+        'font-weight': weight,
+        fill,
+        opacity,
+        'font-family': TACTICAL_FONT
+      });
+      t.textContent = str;
+      nums.appendChild(t);
+    };
+
+    // outer minute numerals
+    for (let i = 1; i <= 11; i++) {
+      if (i === 3) continue;               // replaced by the date window
+      const [x, y] = polar(69, i * 30);
+      label(x, y, 11.6, 600, 1, '#bdf9d6', String(i * 5));
+    }
+
+    // 12-hour numerals
+    for (let h = 1; h <= 12; h++) {
+      if (h === 3) continue;               // replaced by the date window
+      const [x, y] = polar(46.5, h * 30);
+      label(x, y, 7.4, 500, 0.92, '#a7f3c9', String(h));
+    }
+
+    // 24-hour numerals
+    for (let h = 1; h <= 12; h++) {
+      const [x, y] = polar(32.5, h * 30);
+      label(x, y, 5.2, 500, 0.5, '#79d6a3', String(h + 12));
+    }
+
+    // decimal (10-hour) numerals
+    for (let h = 1; h <= 10; h++) {
+      const deg = (h % 10) * 36;
+      const [x, y] = polar(20, deg);
+      label(x, y, 4.6, 500, 0.45, '#79d6a3', String(h));
+    }
+
+    /* ---- BEZEL : minute numerals 5 … 55 ---- */
+    for (let m = 5; m <= 55; m += 5) {
+      const deg = m * 6;
+      const [x, y] = polar(98, deg);
+      const t = mk('text', {
+        x, y,
+        'font-family': TACTICAL_FONT,
+        'font-size': 6.6,
+        'font-weight': 600,
+        'fill': '#c6fad9',
+        'text-anchor': 'middle',
+        'dominant-baseline': 'central',
+        transform: 'rotate(' + deg + ',' + x + ',' + y + ')'
+      });
+      t.textContent = m;
+      bezelMarks.appendChild(t);
+    }
+
+    /* ---- BEZEL : GMT numerals 1 … 23 ---- */
+    for (let h = 1; h <= 23; h++) {
+      const deg = h * 15;
+      const [x, y] = polar(107.5, deg);
+      const t = mk('text', {
+        x, y,
+        'font-family': TACTICAL_FONT,
+        'font-size': 5.0,
+        'font-weight': 500,
+        'fill': '#9fe9c2',
+        'opacity': 0.82,
+        'text-anchor': 'middle',
+        'dominant-baseline': 'central',
+        transform: 'rotate(' + deg + ',' + x + ',' + y + ')'
+      });
+      t.textContent = h;
+      bezelMarks.appendChild(t);
+    }
+
+    /* ---- BEZEL : 1-minute indicators ---- */
+    for (let i = 0; i < 60; i++) {
+      if (i % 5 === 0) continue;
+      const deg = i * 6;
+      const [x1, y1] = polar(93.2, deg);
+      const [x2, y2] = polar(96.8, deg);
+      bezelMarks.appendChild(mk('line', {
+        x1, y1, x2, y2,
+        stroke: '#9fe9c2',
+        'stroke-opacity': 0.8,
+        'stroke-width': 0.6,
+        'stroke-linecap': 'butt'
+      }));
+    }
+
+    /* ---- BEZEL : luminous delta at 12 ---- */
+    bezelMarks.appendChild(mk('path', {
+      d: 'M0,-93 L5.2,-103 L-5.2,-103 Z',
+      fill: '#c9fbd9'
+    }));
+  }
+
+  buildDial({
+    ticks:      document.getElementById('ticks'),
+    medTicks:   document.getElementById('medTicks'),
+    msTicks:    document.getElementById('msTicks'),
+    innerRing:  document.getElementById('innerRing'),
+    nums:       document.getElementById('nums'),
+    bezelMarks: document.getElementById('bezelMarks')
+  });
+
+  buildDial({
+    ticks:      document.getElementById('fTicks'),
+    medTicks:   document.getElementById('fMedTicks'),
+    msTicks:    document.getElementById('fMsTicks'),
+    innerRing:  document.getElementById('fInnerRing'),
+    nums:       document.getElementById('fNums'),
+    bezelMarks: document.getElementById('fBezelMarks')
+  });
+
+  /* =========================================================
+     ROTATING BEZEL : ONE SHARED ANGLE FOR BOTH VIEWS
+     ========================================================= */
+  const svgWatch   = document.getElementById('watch');
+  const svgFace    = document.getElementById('watchFace');
+  const bezelGroups = [
+    document.getElementById('bezelGroup'),
+    document.getElementById('fBezelGroup')
+  ];
+  const bezelHits = [
+    document.getElementById('bezelHit'),
+    document.getElementById('fBezelHit')
+  ];
+
+  let bezelAngle = 0;                       // ← shared between both views
+
+  function applyBezel(deg) {
+    bezelAngle = deg;
+    const t = 'rotate(' + deg.toFixed(3) + ')';
+    bezelGroups.forEach(g => g.setAttribute('transform', t));
+  }
+
+  /* ---- MOBILE FIX: block native touch gestures on the watch itself ----
+     touch-action in CSS does the main job; these listeners are a fallback for
+     browsers (older iOS Safari) that still start scroll / pinch-zoom anyway,
+     which would otherwise cancel the pointer drag mid-rotation. */
+  [svgWatch, svgFace].forEach(svg => {
+    svg.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
+    svg.addEventListener('touchmove',  e => { e.preventDefault(); }, { passive: false });
+  });
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => {
+    document.addEventListener(type, e => e.preventDefault());
+  });
+
+  /* ---- drag state ---- */
+  let dragId          = null;
+  let dragCx          = 0;     // dial centre in screen pixels (fixed for the drag)
+  let dragCy          = 0;
+  let dragLast        = 0;     // previous pointer angle (for incremental tracking)
+  let lastPointerType = 'mouse';
+
+  /* Dial centre from the element's on-screen box. Both viewBoxes are centred on
+     the dial origin, so the box centre IS the dial centre. This avoids
+     getScreenCTM(), which is unreliable on some mobile browsers. */
+  function dialCentre(svg) {
+    const r = svg.getBoundingClientRect();
+    return [ r.left + r.width / 2, r.top + r.height / 2 ];
+  }
+
+  function pointerAngle(e) {
+    return Math.atan2(e.clientX - dragCx, -(e.clientY - dragCy)) * 180 / Math.PI;
+  }
+
+  function onBezelMove(e) {
+    if (dragId === null || e.pointerId !== dragId) return;
+    e.preventDefault();
+
+    const a = pointerAngle(e);
+    let delta = a - dragLast;
+    while (delta >  180) delta -= 360;
+    while (delta < -180) delta += 360;
+    dragLast = a;
+
+    /* incremental tracking: keeps working for fast swipes and for turning
+       more than half a revolution in a single drag */
+    applyBezel(bezelAngle + delta);
+  }
+
+  function onBezelUp(e) {
+    if (dragId === null) return;
+    if (e && e.pointerId !== undefined && e.pointerId !== dragId) return;
+    dragId = null;
+    window.removeEventListener('pointermove',   onBezelMove);
+    window.removeEventListener('pointerup',     onBezelUp);
+    window.removeEventListener('pointercancel', onBezelUp);
+    bezelHits.forEach(h => { h.style.cursor = 'grab'; });
+  }
+
+  function onBezelDown(svg, e) {
+    if (dragId !== null) return;             // ignore extra fingers
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+
+    lastPointerType = e.pointerType || 'mouse';
+
+    const c = dialCentre(svg);
+    dragCx = c[0];
+    dragCy = c[1];
+
+    dragId   = e.pointerId;
+    dragLast = pointerAngle(e);
+
+    /* Safari/iOS can throw when capturing on SVG elements — the window-level
+       listeners below keep the drag alive even if capture is unavailable. */
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+
+    bezelHits.forEach(h => { h.style.cursor = 'grabbing'; });
+
+    window.addEventListener('pointermove',   onBezelMove, { passive: false });
+    window.addEventListener('pointerup',     onBezelUp);
+    window.addEventListener('pointercancel', onBezelUp);
+  }
+
+  bezelHits[0].addEventListener('pointerdown', e => onBezelDown(svgWatch, e));
+  bezelHits[1].addEventListener('pointerdown', e => onBezelDown(svgFace,  e));
+  cancelDrags.push(() => onBezelUp());
+
+  /* wheel + double-click reset (desktop niceties) */
+  bezelHits.forEach(hit => {
+    hit.addEventListener('wheel', e => {
+      e.preventDefault();
+      applyBezel(bezelAngle + (e.deltaY > 0 ? 3 : -3));
+    }, { passive: false });
+
+    hit.addEventListener('dblclick', e => {
+      e.preventDefault();
+      if (lastPointerType === 'touch') return;  // don't snap on double-tap
+      applyBezel(0);
+    });
+  });
+
+  /* =========================================================
+     LIVE HANDS, DATE & WEEKDAY (both views, one loop)
+     ========================================================= */
+  const clocks = [
+    {
+      hour:    document.getElementById('hourHand'),
+      min:     document.getElementById('minHand'),
+      sec:     document.getElementById('secHand'),
+      h24:     document.getElementById('h24Hand'),
+      date:    document.getElementById('dateText'),
+      weekday: document.getElementById('weekdayText'),
+      cH:      document.getElementById('chronoHText'),
+      cC:      document.getElementById('chronoCText'),
+      cM:      document.getElementById('chronoMText'),
+      delta:   document.querySelectorAll('.chronoDelta')[0]
+    },
+    {
+      hour:    document.getElementById('fHourHand'),
+      min:     document.getElementById('fMinHand'),
+      sec:     document.getElementById('fSecHand'),
+      h24:     document.getElementById('fH24Hand'),
+      date:    document.getElementById('fDateText'),
+      weekday: document.getElementById('fWeekdayText'),
+      cH:      document.getElementById('fChronoHText'),
+      cC:      document.getElementById('fChronoCText'),
+      cM:      document.getElementById('fChronoMText'),
+      delta:   document.querySelectorAll('.chronoDelta')[1]
+    }
+  ];
+
+  const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+  /* =========================================================
+     CHRONOGRAPH
+     Start : date box swaps to elapsed HH:MM, the dial delta
+             starts sweeping (one lap per 60 s).
+     Reset : delta returns to 12, box shows the date again.
+     ========================================================= */
+  const pad2   = n => String(n).padStart(2, '0');
+  /* running : counting right now
+     active  : chronograph mode shown (true while running OR paused)
+     acc     : milliseconds banked before the current run segment */
+  const chrono = { running: false, active: false, t0: 0, acc: 0 };
+
+  const chronoElapsedMs = () =>
+    chrono.acc + (chrono.running ? performance.now() - chrono.t0 : 0);
+
+  function applyChronoMode(on) {
+    for (let i = 0; i < clocks.length; i++) {
+      const c = clocks[i];
+      c.date   .setAttribute('display', on ? 'none'   : 'inline');
+      c.weekday.setAttribute('display', on ? 'none'   : 'inline');
+      c.cH     .setAttribute('display', on ? 'inline' : 'none');
+      c.cC     .setAttribute('display', on ? 'inline' : 'none');
+      c.cM     .setAttribute('display', on ? 'inline' : 'none');
+    }
+  }
+
+  /* Start button: start -> pause -> resume -> pause ... */
+  function startChrono() {
+    if (chrono.running) {                  // pause: bank the time, freeze display
+      chrono.acc += performance.now() - chrono.t0;
+      chrono.running = false;
+      updateChronoLabel();
+      return;
+    }
+    chrono.running = true;                 // start or resume
+    chrono.t0 = performance.now();
+    if (!chrono.active) {
+      chrono.active = true;
+      applyChronoMode(true);               // date vanishes instantly
+    }
+    updateChronoLabel();
+  }
+
+  function resetChrono() {
+    chrono.running = false;
+    chrono.active  = false;
+    chrono.acc     = 0;
+    applyChronoMode(false);                // date is back
+    updateChronoLabel();
+  }
+
+  /* Start button reads "Pause" while the chronograph is running */
+  function updateChronoLabel() {
+    document.getElementById('chronoStartBtn').textContent =
+      chrono.running ? 'Pause' : 'Start';
+  }
+
+  /* corner buttons */
+  document.getElementById('chronoStartBtn').addEventListener('click', startChrono);
+  document.getElementById('chronoResetBtn').addEventListener('click', resetChrono);
+
+  /* side pushers (act on press, spring back on release) */
+  function setupPusher(id, action) {
+    const g    = document.getElementById(id);
+    const body = g.querySelector('.pusherBody');
+    let pid = null;
+
+    g.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (pid !== null) return;
+      pid = e.pointerId;
+      try { g.setPointerCapture(e.pointerId); } catch (_) {}
+      body.setAttribute('transform', 'translate(-3,0)');
+      action();
+    });
+
+    function release(e) {
+      if (pid === null || (e && e.pointerId !== undefined && e.pointerId !== pid)) return;
+      pid = null;
+      body.removeAttribute('transform');
+    }
+    g.addEventListener('pointerup', release);
+    g.addEventListener('pointercancel', release);
+    g.addEventListener('lostpointercapture', release);
+    g.addEventListener('contextmenu', e => e.preventDefault());
+
+    g.addEventListener('keydown', e => {
+      if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) {
+        e.preventDefault();
+        body.setAttribute('transform', 'translate(-3,0)');
+        action();
+      }
+    });
+    g.addEventListener('keyup', e => {
+      if (e.key === ' ' || e.key === 'Enter') body.removeAttribute('transform');
+    });
+  }
+
+  setupPusher('pusherStart', startChrono);
+  setupPusher('pusherReset', resetChrono);
+
+  function run() {
+    const now = new Date();
+    const ms  = now.getMilliseconds();
+    const s   = now.getSeconds() + ms / 1000;
+    const m   = now.getMinutes() + s / 60;
+    const h   = (now.getHours() % 12) + m / 60;
+    const h24 = now.getHours() + m / 60;
+
+    const day = String(now.getDate()).padStart(2, '0');
+    const wd  = WEEKDAYS[now.getDay()];
+
+    const cs   = chronoElapsedMs() / 1000;
+    const cHH  = pad2(Math.floor(cs / 3600) % 100);
+    const cMM  = pad2(Math.floor(cs / 60) % 60);
+    const cDeg = (cs % 60) * 6;
+
+    for (let i = 0; i < clocks.length; i++) {
+      const c = clocks[i];
+      c.hour.setAttribute('transform', 'rotate(' + (h   * 30).toFixed(4) + ')');
+      c.min .setAttribute('transform', 'rotate(' + (m   * 6 ).toFixed(4) + ')');
+      c.sec .setAttribute('transform', 'rotate(' + (s   * 6 ).toFixed(4) + ')');
+      c.h24 .setAttribute('transform', 'rotate(' + (h24 * 15).toFixed(4) + ')');
+
+      c.delta.setAttribute('transform', 'rotate(' + cDeg.toFixed(4) + ')');
+      if (c.cH.textContent !== cHH) c.cH.textContent = cHH;
+      if (c.cM.textContent !== cMM) c.cM.textContent = cMM;
+
+      if (c.date.textContent    !== day) c.date.textContent    = day;
+      if (c.weekday.textContent !== wd)  c.weekday.textContent = wd;
+
+      /* keep each read-out centred in its half of the box (cached per text) */
+      centerInk(c.weekday, 48.5, 0, CAPS);
+      centerInk(c.date,    65.5, 0, DIGITS);
+      centerInk(c.cH,      48.5, 0, DIGITS);
+      centerInk(c.cM,      65.5, 0, DIGITS);
+    }
+
+    requestAnimationFrame(run);
+  }
+  run();
+
+  /* =========================================================
+     COMPASS (lower strap, full watch only)
+       - bezel : bearings + indicator lines, turned by hand (drag / wheel)
+       - card  : turns with the phone's compass sensor (no hands)
+       - delta : marks north on the card
+       Without a sensor (desktop, denied permission, no HTTPS) the card
+       simply stays put, so north points up.
+     ========================================================= */
+  (function setupCompass() {
+    const teeth      = document.getElementById('compassTeeth');
+    const bezelMarks = document.getElementById('compassBezelMarks');
+    const cardMarks  = document.getElementById('compassCardMarks');
+    const bezelGrp   = document.getElementById('compassBezel');
+    const cardGrp    = document.getElementById('compassCard');
+    const caseEl     = document.getElementById('compassCase');
+    const bezelHit   = document.getElementById('compassBezelHit');
+    const tapEl      = document.getElementById('compassTap');
+    const linesGrp   = document.getElementById('compassBezelLines');
+    if (!teeth || !bezelMarks || !cardMarks) return;
+
+    const radialText = (parent, r, deg, size, weight, fill, str, opacity) => {
+      const [x, y] = polar(r, deg);
+      const t = mk('text', {
+        x, y,
+        'font-family': TACTICAL_FONT,
+        'font-size': size,
+        'font-weight': weight,
+        fill,
+        'text-anchor': 'middle',
+        'dominant-baseline': 'central',
+        transform: 'rotate(' + deg + ',' + x + ',' + y + ')'
+      });
+      if (opacity !== undefined) t.setAttribute('opacity', opacity);
+      t.textContent = str;
+      parent.appendChild(t);
+    };
+
+    const radialLine = (parent, r1, r2, deg, attrs) => {
+      const [x1, y1] = polar(r1, deg);
+      const [x2, y2] = polar(r2, deg);
+      parent.appendChild(mk('line', Object.assign(
+        { x1, y1, x2, y2, 'stroke-linecap': 'butt' }, attrs)));
+    };
+
+    /* ---- knurled rim: 24 flat-topped teeth, tips at r = 52 (= strap half-width) ---- */
+    (function () {
+      const N = 24, R_TIP = 52, R_ROOT = 49.6, P = 360 / N;
+      let d = '';
+      for (let i = 0; i < N; i++) {
+        const a0 = i * P, a1 = a0 + P * 0.25, a2 = a0 + P * 0.75, a3 = a0 + P;
+        const p0 = polar(R_ROOT, a0), p1 = polar(R_TIP, a1),
+              p2 = polar(R_TIP,  a2), p3 = polar(R_ROOT, a3);
+        d += (i === 0 ? 'M' : 'L') + p0 + ' L' + p1 + ' L' + p2 + ' L' + p3 + ' ';
+      }
+      teeth.appendChild(mk('path', {
+        d: d + 'Z',
+        fill: 'url(#compassTeethGrad)',
+        stroke: '#3d3d3d', 'stroke-opacity': 0.5, 'stroke-width': 0.35,
+        'stroke-linejoin': 'miter'
+      }));
+    })();
+
+    /* ---- BEZEL : indicator lines every 5° / 10° / 30° ---- */
+    for (let d = 0; d < 360; d += 5) {
+      let r2, w, op;
+      if (d % 30 === 0)      { r2 = 44.5; w = 0.8; op = 0.95; }
+      else if (d % 10 === 0) { r2 = 43.9; w = 0.5; op = 0.85; }
+      else                   { r2 = 43.0; w = 0.3; op = 0.70; }
+      radialLine(bezelMarks, 41.8, r2, d, {
+        stroke: '#9fe9c2', 'stroke-opacity': op, 'stroke-width': w
+      });
+    }
+
+    /* ---- BEZEL : bearings every 30° (0° is the luminous delta) ---- */
+    for (let d = 30; d < 360; d += 30) {
+      radialText(bezelMarks, 46.7, d, 4.2, 600, '#c6fad9', String(d));
+    }
+    bezelMarks.appendChild(mk('path', {
+      d: 'M0,-42.4 L2.5,-48.2 L-2.5,-48.2 Z',
+      fill: '#c9fbd9'
+    }));
+
+    /* ---- CARD : degree scale (the delta replaces the tick at north) ---- */
+    for (let d = 5; d < 360; d += 5) {
+      let r1, w, op;
+      if (d % 30 === 0)      { r1 = 36.4; w = 0.8; op = 0.95; }
+      else if (d % 10 === 0) { r1 = 37.6; w = 0.5; op = 0.80; }
+      else                   { r1 = 38.7; w = 0.3; op = 0.60; }
+      radialLine(cardMarks, r1, 40.0, d, {
+        stroke: '#a7f3c9', 'stroke-opacity': op, 'stroke-width': w
+      });
+    }
+
+    /* ---- CARD : cardinal letters + bearings every 30° ---- */
+    [['N', 0], ['E', 90], ['S', 180], ['W', 270]].forEach(c => {
+      radialText(cardMarks, 28, c[1], 8.2, 700, '#bdf9d6', c[0]);
+    });
+    for (let d = 30; d < 360; d += 30) {
+      if (d % 90 === 0) continue;
+      radialText(cardMarks, 31.6, d, 4.4, 500, '#a7f3c9', String(d), 0.92);
+    }
+
+    /* ---- CARD : inner ring ---- */
+    cardMarks.appendChild(mk('circle', {
+      r: 19.5, fill: 'none', stroke: '#a7f3c9',
+      'stroke-opacity': 0.30, 'stroke-width': 0.4
+    }));
+    for (let d = 0; d < 360; d += 10) {
+      radialLine(cardMarks, 18.2, 19.5, d, {
+        stroke: '#a7f3c9', 'stroke-opacity': 0.4, 'stroke-width': 0.3
+      });
+    }
+
+    /* ---- CARD : small delta that shows north ---- */
+    cardMarks.appendChild(mk('path', {
+      d: 'M0,-39.8 L2.3,-34.6 L-2.3,-34.6 Z',
+      fill: '#c9fbd9'
+    }));
+
+    /* =====================  BEZEL : drag to turn  ===================== */
+    let bAngle = 0, bDragId = null, bCx = 0, bCy = 0, bLast = 0;
+
+    const applyCompassBezel = deg => {
+      bAngle = deg;
+      const t = 'rotate(' + deg.toFixed(3) + ')';
+      bezelGrp.setAttribute('transform', t);
+      linesGrp.setAttribute('transform', t);
+    };
+    const bPointerAngle = e =>
+      Math.atan2(e.clientX - bCx, -(e.clientY - bCy)) * 180 / Math.PI;
+
+    function bMove(e) {
+      if (bDragId === null || e.pointerId !== bDragId) return;
+      e.preventDefault();
+      const a = bPointerAngle(e);
+      let delta = a - bLast;
+      while (delta >  180) delta -= 360;
+      while (delta < -180) delta += 360;
+      bLast = a;
+      applyCompassBezel(bAngle + delta);
+    }
+    function bUp(e) {
+      if (bDragId === null) return;
+      if (e && e.pointerId !== undefined && e.pointerId !== bDragId) return;
+      bDragId = null;
+      window.removeEventListener('pointermove',   bMove);
+      window.removeEventListener('pointerup',     bUp);
+      window.removeEventListener('pointercancel', bUp);
+      bezelHit.style.cursor = 'grab';
+    }
+    bezelHit.addEventListener('pointerdown', e => {
+      if (bDragId !== null) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      const r = caseEl.getBoundingClientRect();
+      bCx = r.left + r.width / 2;
+      bCy = r.top  + r.height / 2;
+      bDragId = e.pointerId;
+      bLast   = bPointerAngle(e);
+      try { bezelHit.setPointerCapture(e.pointerId); } catch (_) {}
+      bezelHit.style.cursor = 'grabbing';
+      window.addEventListener('pointermove',   bMove, { passive: false });
+      window.addEventListener('pointerup',     bUp);
+      window.addEventListener('pointercancel', bUp);
+    });
+    bezelHit.addEventListener('wheel', e => {
+      e.preventDefault();
+      applyCompassBezel(bAngle + (e.deltaY > 0 ? 3 : -3));
+    }, { passive: false });
+    bezelHit.addEventListener('dblclick', e => {
+      e.preventDefault();
+      applyCompassBezel(0);
+    });
+    cancelDrags.push(() => bUp());
+
+    /* =====================  CARD : motion sensor  ===================== */
+    let target = 0;      // heading we want to show (° clockwise from north)
+    let shown  = 0;      // heading currently drawn (eased towards target)
+    let live   = false;  // true once a real sensor reading has arrived
+
+    const norm = a => ((a % 360) + 360) % 360;
+
+    const screenAngle = () => {
+      if (screen.orientation && typeof screen.orientation.angle === 'number')
+        return screen.orientation.angle;
+      return typeof window.orientation === 'number' ? window.orientation : 0;
+    };
+
+    /* Heading from absolute alpha / beta / gamma.
+       Flat on a table the top edge is the reference (heading = 360 - alpha);
+       held upright the back of the phone is. Whichever of the two has the
+       longer horizontal projection is used, so it also works when the phone
+       is perfectly flat (where the usual "back only" formula breaks down). */
+    function eulerHeading(alpha, beta, gamma) {
+      const k = Math.PI / 180;
+      const a = alpha * k, b = beta * k, g = gamma * k;
+      const cA = Math.cos(a), sA = Math.sin(a);
+      const cB = Math.cos(b), sB = Math.sin(b);
+      const cG = Math.cos(g), sG = Math.sin(g);
+      const tE = -sA * cB,                 tN = cA * cB;                 // device top
+      const bE = -(cA * sG + sA * sB * cG), bN = -(sA * sG - cA * sB * cG); // device back
+      const useTop = Math.hypot(tE, tN) >= Math.hypot(bE, bN);
+      return norm(Math.atan2(useTop ? tE : bE, useTop ? tN : bN) / k);
+    }
+
+    function onOrientation(e) {
+      let h = null;
+      if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
+        h = e.webkitCompassHeading;                       // iOS: already vs. north
+      } else if (e.alpha !== null && e.alpha !== undefined &&
+                 e.beta  !== null && e.gamma !== null &&
+                 (e.absolute === true || e.type === 'deviceorientationabsolute')) {
+        h = eulerHeading(e.alpha, e.beta, e.gamma);        // Android / Firefox
+      }
+      if (h === null || isNaN(h)) return;                  // desktop: null readings
+      target = norm(h + screenAngle());
+      if (!live) {
+        live = true;
+        shown = target;                                    // no spin-up on first reading
+      }
+    }
+
+    let listening = false;
+    function listen() {
+      if (listening) return;
+      listening = true;
+      window.addEventListener('deviceorientationabsolute', onOrientation, true);
+      window.addEventListener('deviceorientation',         onOrientation, true);
+    }
+
+    const needsPermission = typeof DeviceOrientationEvent !== 'undefined' &&
+                            typeof DeviceOrientationEvent.requestPermission === 'function';
+    let asking = false;
+
+    function askPermission() {
+      if (!needsPermission || listening || asking) return;
+      asking = true;
+      DeviceOrientationEvent.requestPermission()
+        .then(state => { if (state === 'granted') listen(); })
+        .catch(() => {})
+        .then(() => { asking = false; });
+    }
+
+    if (needsPermission) {
+      /* iOS only lets this be requested from a tap on the dial */
+      tapEl.addEventListener('pointerup', askPermission);
+      tapEl.addEventListener('touchend',  askPermission);
+      tapEl.addEventListener('click',     askPermission);
+    } else if (typeof window.DeviceOrientationEvent !== 'undefined') {
+      listen();                                            // Android, desktop, …
+    }
+
+    /* ease the card towards the target along the shortest way round */
+    let drawn = null;
+    (function loop() {
+      let d = target - shown;
+      while (d >  180) d -= 360;
+      while (d < -180) d += 360;
+      shown = Math.abs(d) < 0.05 ? target : norm(shown + d * 0.2);
+      if (shown !== drawn) {
+        drawn = shown;
+        cardGrp.setAttribute('transform', 'rotate(' + (-shown).toFixed(2) + ')');
+      }
+      requestAnimationFrame(loop);
+    })();
+  })();
+
+  /* =========================================================
+     LIGHT / DARK MODE TOGGLE
+     ========================================================= */
+  const modeBtn = document.getElementById('modeToggle');
+
+  modeBtn.addEventListener('click', () => {
+    const on = document.documentElement.classList.toggle('light-mode');
+    modeBtn.textContent = on ? 'Dark' : 'Light';
+    modeBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
+  /* =========================================================
+     VIEW TOGGLE : FULL WATCH  <->  WATCH FACE
+     ========================================================= */
+  const viewBtn = document.getElementById('viewToggle');
+  let faceView  = false;
+
+  viewBtn.addEventListener('click', () => {
+    faceView = !faceView;
+    svgWatch.classList.toggle('is-hidden',  faceView);
+    svgFace .classList.toggle('is-hidden', !faceView);
+    viewBtn.textContent = faceView ? 'Full Watch' : 'Watch Face';
+    viewBtn.setAttribute('aria-pressed', faceView ? 'true' : 'false');
+    /* both bezel groups already carry the shared angle, so orientation
+       is preserved automatically when switching views */
+  });
+
+  /* =========================================================
+     BACKLIGHT (hold the crown, the button, or Space / Enter)
+     ========================================================= */
+  const backlightBtn = document.getElementById('backlightBtn');
+  const crown        = document.getElementById('crown');
+
+  function setBacklight(on) {
+    document.documentElement.classList.toggle('backlight', on);
+    backlightBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    crown.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+
+  function holdBacklight(el) {
+    let pointerId = null;
+
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      pointerId = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      setBacklight(true);
+    });
+
+    function end(e) {
+      if (pointerId !== null && e && e.pointerId !== undefined &&
+          e.pointerId !== pointerId) return;
+      pointerId = null;
+      setBacklight(false);
+    }
+
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('lostpointercapture', end);
+    el.addEventListener('contextmenu', e => e.preventDefault());
+
+    el.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (!e.repeat) setBacklight(true);
+      }
+    });
+    el.addEventListener('keyup', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        setBacklight(false);
+      }
+    });
+    el.addEventListener('blur', () => setBacklight(false));
+
+    return end;
+  }
+
+  const endCrown = holdBacklight(crown);
+  const endBtn   = holdBacklight(backlightBtn);
+
+  /* safety: releasing the pointer anywhere on the page ends the backlight */
+  window.addEventListener('pointerup',     e => { endCrown(e); endBtn(e); });
+  window.addEventListener('pointercancel', e => { endCrown(e); endBtn(e); });
+
+  /* =========================================================
+     ZOOM & PAN  (self-contained; only scales/moves #stage)
+       PC     : mouse wheel zooms at the cursor (over a bezel the wheel still
+                turns the bezel - hold Ctrl/Cmd there to zoom instead),
+                trackpad pinch (Ctrl+wheel), drag the dial/background to pan,
+                double-click zooms in / back out, keys + - 0
+       Phone  : two-finger pinch zooms (and pans while pinching),
+                one-finger drag pans when zoomed, double-tap zooms in / out
+     Bezels, crown, pushers and the corner buttons keep their own gestures.
+     ========================================================= */
+  (function setupZoom() {
+    const stage = document.getElementById('stage');
+    const root  = document.documentElement;
+    if (!stage) return;
+
+    const MIN_Z = 1, MAX_Z = 8, DBL_Z = 2.5;
+    const TAP_MS = 300, TAP_PX = 8, DTAP_MS = 350, DTAP_PX = 30;
+
+    let z = 1, tx = 0, ty = 0;                 // scale and screen-pixel offset
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+    /* untransformed centre of the stage (layout values ignore transforms) */
+    const centre = () => [ stage.offsetLeft + stage.offsetWidth  / 2,
+                           stage.offsetTop  + stage.offsetHeight / 2 ];
+
+    let animTimer = 0;
+    function apply(animate) {
+      /* keep the picture covering the screen; smaller than the screen = centred */
+      const vw = root.clientWidth, vh = root.clientHeight;
+      const mx = Math.max(0, (stage.offsetWidth  * z - vw) / 2);
+      const my = Math.max(0, (stage.offsetHeight * z - vh) / 2);
+      tx = clamp(tx, -mx, mx);
+      ty = clamp(ty, -my, my);
+
+      clearTimeout(animTimer);
+      if (animate) {
+        stage.style.transition = 'transform 0.18s ease-out';
+        animTimer = setTimeout(() => { stage.style.transition = ''; }, 220);
+      } else {
+        stage.style.transition = '';
+      }
+      stage.style.transform =
+        'translate(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px) scale(' + z.toFixed(4) + ')';
+      root.classList.toggle('zoomed', z > 1.001);
+    }
+
+    /* zoom to scale s2 keeping the screen point (px,py) fixed */
+    function zoomAt(px, py, s2, animate) {
+      s2 = clamp(s2, MIN_Z, MAX_Z);
+      const c  = centre();
+      const lx = (px - c[0] - tx) / z;         // point under the finger / cursor,
+      const ly = (py - c[1] - ty) / z;         // in unscaled stage units
+      z  = s2;
+      tx = px - c[0] - lx * z;
+      ty = py - c[1] - ly * z;
+      apply(animate);
+    }
+
+    const closest   = (t, sel) => (t && t.closest) ? t.closest(sel) : null;
+    const isButton  = t => !!closest(t, 'button');
+    const isControl = t => !!closest(t, '#bezelHit, #fBezelHit, #compassBezelHit, #crown, .pusher');
+    const BEZELS    = '#bezelHit, #fBezelHit, #compassBezelHit';
+
+    /* ---------- wheel / trackpad pinch ---------- */
+    window.addEventListener('wheel', e => {
+      if (isButton(e.target)) return;
+      const modKey = e.ctrlKey || e.metaKey;
+      if (!modKey && closest(e.target, BEZELS)) return;      // bezel keeps its own wheel
+      e.preventDefault();
+      e.stopPropagation();                                   // and Ctrl+wheel never turns it
+      let dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      dy = clamp(dy, -250, 250);
+      zoomAt(e.clientX, e.clientY, z * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)), false);
+    }, { passive: false, capture: true });
+
+    /* ---------- pointers: pan, pinch, double tap ---------- */
+    const pts = new Map();         // pointerId -> state
+    let mode  = 'none';            // 'none' | 'pan' | 'pinch'
+    let pinch = null;
+    let lastTap = { t: 0, x: 0, y: 0 };
+
+    function startPinch() {
+      const two = [];
+      pts.forEach((p, id) => { if (p.type !== 'mouse' && two.length < 2) two.push(id); });
+      if (two.length < 2) return;
+      cancelDrags.forEach(f => f());                         // let go of any bezel drag
+      const a = pts.get(two[0]), b = pts.get(two[1]);
+      const c  = centre();
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      pinch = {
+        a: two[0], b: two[1],
+        d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        s0: z,
+        lx: (mx - c[0] - tx) / z,
+        ly: (my - c[1] - ty) / z
+      };
+      a.moved = b.moved = true;
+      mode = 'pinch';
+      root.classList.remove('panning');
+    }
+
+    function updatePinch() {
+      const a = pts.get(pinch.a), b = pts.get(pinch.b);
+      if (!a || !b) return;
+      const c  = centre();
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const d  = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+      z  = clamp(pinch.s0 * d / pinch.d0, MIN_Z, MAX_Z);
+      tx = mx - c[0] - pinch.lx * z;                         // midpoint drags the picture
+      ty = my - c[1] - pinch.ly * z;
+      apply(false);
+    }
+
+    window.addEventListener('pointerdown', e => {
+      if (isButton(e.target)) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const control = isControl(e.target);
+      pts.set(e.pointerId, {
+        type: e.pointerType, x: e.clientX, y: e.clientY,
+        sx: e.clientX, sy: e.clientY, t: performance.now(),
+        free:  !control,                                     // may start a pan
+        tapOk: !control && e.target.id !== 'compassTap',     // may count as a tap
+        moved: false
+      });
+      if (pts.size >= 2 && mode !== 'pinch') startPinch();
+    }, true);
+
+    window.addEventListener('pointermove', e => {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+
+      if (mode === 'pinch') {
+        if (pinch && (e.pointerId === pinch.a || e.pointerId === pinch.b)) updatePinch();
+        return;
+      }
+      if (!p.free || pts.size !== 1) return;                 // a bezel/crown finger: not ours
+
+      if (!p.moved) {
+        if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < TAP_PX) return;
+        p.moved = true;                                      // no longer a tap
+        if (z > 1.001) {
+          mode = 'pan';
+          root.classList.add('panning');
+          if (e.pointerType === 'mouse') { try { root.setPointerCapture(e.pointerId); } catch (_) {} }
+          tx += e.clientX - p.sx;                            // catch up with the dead zone
+          ty += e.clientY - p.sy;
+          apply(false);
+        }
+        return;
+      }
+      if (mode === 'pan') { tx += dx; ty += dy; apply(false); }
+    }, true);
+
+    function endPointer(e) {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      pts.delete(e.pointerId);
+
+      if (mode === 'pinch') {
+        if (pinch && (e.pointerId === pinch.a || e.pointerId === pinch.b)) {
+          mode = 'none'; pinch = null;
+          /* a finger that is still down carries on as a pan (no tap, no jump) */
+          pts.forEach(q => { q.sx = q.x; q.sy = q.y; q.moved = true; });
+          if (pts.size === 1) {
+            const q = pts.values().next().value;
+            if (q.free && z > 1.001) { mode = 'pan'; root.classList.add('panning'); }
+          }
+          if (mode !== 'pan') root.classList.remove('panning');
+        }
+        return;
+      }
+
+      if (pts.size === 0) { mode = 'none'; root.classList.remove('panning'); }
+
+      if (e.type === 'pointerup' && p.tapOk && !p.moved &&
+          performance.now() - p.t < TAP_MS) {
+        const now = performance.now();
+        if (now - lastTap.t < DTAP_MS &&
+            Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < DTAP_PX) {
+          lastTap.t = 0;
+          zoomAt(e.clientX, e.clientY, z > 1.05 ? 1 : DBL_Z, true);   // double tap / click
+        } else {
+          lastTap = { t: now, x: e.clientX, y: e.clientY };
+        }
+      }
+    }
+    window.addEventListener('pointerup',     endPointer, true);
+    window.addEventListener('pointercancel', endPointer, true);
+
+    /* a lost release (pointer let go outside the window) must never leave a
+       ghost finger behind that would turn the next touch into a pinch */
+    function resetPointers() {
+      pts.clear(); pinch = null; mode = 'none';
+      root.classList.remove('panning');
+    }
+    window.addEventListener('blur', resetPointers);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) resetPointers(); });
+
+    /* ---------- keyboard ---------- */
+    window.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const cx = root.clientWidth / 2, cy = root.clientHeight / 2;
+      if (e.key === '+' || e.key === '=')      zoomAt(cx, cy, z * 1.25, true);
+      else if (e.key === '-' || e.key === '_') zoomAt(cx, cy, z / 1.25, true);
+      else if (e.key === '0')                  zoomAt(cx, cy, 1, true);
+    });
+
+    /* ---------- keep everything valid when the size changes ---------- */
+    window.addEventListener('resize', () => apply(false));
+    window.addEventListener('orientationchange', () => apply(false));
+    if (window.ResizeObserver) new ResizeObserver(() => apply(false)).observe(stage);
+  })();
+})();
+</script>
 
 </body>
-
 </html>
