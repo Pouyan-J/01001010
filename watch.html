@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Poltergeist Watch</title>
+<link rel="icon" href="icon.ico"/>
 
 <!-- Tactical / military condensed font (Oswald) + monospaced brand font (Share Tech Mono) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,6 +32,17 @@
     align-items: center;
     justify-content: center;
   }
+
+  /* ================= ZOOM / PAN CONTAINER ================= */
+  #stage {
+    display: block;
+    flex: none;
+    transform-origin: 50% 50%;     /* the dial centre; script sets translate + scale */
+    touch-action: none;
+  }
+  html.zoomed body     { cursor: grab; }
+  html.panning,
+  html.panning * { cursor: grabbing !important; }
 
   /* ================= VIEW CONTAINERS ================= */
   .watchSvg {
@@ -206,7 +218,8 @@
   html.light-mode .watchSvg [stroke="#a7f3c9"],
   html.light-mode .watchSvg [stroke="#bdf9d6"],
   html.light-mode .watchSvg [stroke="#79d6a3"],
-  html.light-mode .watchSvg [stroke="#9fe9c2"] {
+  html.light-mode .watchSvg [stroke="#9fe9c2"],
+  html.light-mode .watchSvg [stroke="#c9fbd9"] {   /* #c9fbd9: compass lubber line (top indicator) */
     stroke: #ffffff;
   }
 
@@ -247,8 +260,12 @@
   }
 
   /* date window: lit blue background, solid black frame and text */
-  html.backlight .dateWindow rect {
+  html.backlight .dateWindow .dwHalf {
     fill: #5fbcff !important;
+    stroke: none !important;
+  }
+  html.backlight .dateWindow .dwFrame {
+    fill: none !important;
     stroke: #000000 !important;
     stroke-opacity: 1 !important;
   }
@@ -272,6 +289,10 @@
 <button id="backlightBtn" type="button" aria-pressed="false">Backlight</button>
 <button id="chronoStartBtn" type="button">Start</button>
 <button id="chronoResetBtn" type="button">Reset</button>
+
+<!-- zoom / pan container: both views live inside it, the script scales and
+     moves this one element (the corner buttons stay outside, so they stay put) -->
+<div id="stage">
 
 <!-- =========================================================
      VIEW 1 — FULL WATCH (default)
@@ -414,6 +435,49 @@
     <!-- depth fade into the darkness -->
     <rect x="-52" y="-300" width="104" height="90" fill="url(#fadeDown)"/>
     <rect x="-52" y="210"  width="104" height="90" fill="url(#fadeUp)"/>
+
+    <!-- ================= PATCH RIBBON (top strap) =================
+         Black ribbon, 104 wide (= compass diameter = strap width), mirrored
+         to the compass position (centre y = -186). Drawn after the fades so
+         it is not dimmed. Not part of .faceMarkings / .hands, so neither the
+         light-mode nor the backlight styling touches it. -->
+    <g id="patchRibbon">
+      <rect x="-52" y="-214" width="104" height="56" fill="#020202"/>
+      <!-- ribbon edges -->
+      <line x1="-52" y1="-213.6" x2="52" y2="-213.6" stroke="#303030" stroke-width="0.8"/>
+      <line x1="-52" y1="-158.4" x2="52" y2="-158.4" stroke="#303030" stroke-width="0.8"/>
+      <!-- stitching -->
+      <line x1="-52" y1="-211" x2="52" y2="-211"
+            stroke="#4a4a4a" stroke-opacity="0.6" stroke-width="0.6"
+            stroke-dasharray="2.6 2.2"/>
+      <line x1="-52" y1="-161" x2="52" y2="-161"
+            stroke="#4a4a4a" stroke-opacity="0.6" stroke-width="0.6"
+            stroke-dasharray="2.6 2.2"/>
+
+      <!-- patch 1 : US Army 1st Lieutenant (single silver bar, gray on black) -->
+      <g id="patchRank" transform="translate(-25,-186)">
+        <rect x="-21" y="-21" width="42" height="42" rx="2"
+              fill="#000000" stroke="#3a3a3a" stroke-width="0.8"/>
+        <rect x="-18.6" y="-18.6" width="37.2" height="37.2" rx="1"
+              fill="none" stroke="#8c8c8c" stroke-width="1"/>
+        <rect x="-4.5" y="-12" width="9" height="24" rx="0.6" fill="#9c9c9c"/>
+        <rect x="-3.2" y="-10.7" width="6.4" height="21.4" rx="0.3"
+              fill="none" stroke="#000000" stroke-opacity="0.35" stroke-width="0.5"/>
+      </g>
+
+      <!-- patch 2 : blood type +O -->
+      <g id="patchBlood" transform="translate(25,-186)">
+        <rect x="-21" y="-21" width="42" height="42" rx="2"
+              fill="#000000" stroke="#3a3a3a" stroke-width="0.8"/>
+        <rect x="-18.6" y="-18.6" width="37.2" height="37.2" rx="1"
+              fill="none" stroke="#8c8c8c" stroke-width="1"/>
+        <text id="bloodText" x="0" y="1"
+              fill="#9c9c9c"
+              font-family="'Oswald', 'Bahnschrift Condensed', 'DIN Condensed', 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+              font-size="21" font-weight="700"
+              text-anchor="middle" dominant-baseline="central">+O</text>
+      </g>
+    </g>
 
     <!-- keeper loop (moved down to make room for the compass) -->
     <g transform="translate(0,46)">
@@ -652,8 +716,11 @@
 
   <!-- ================= DATE WINDOW ================= -->
   <g id="dateWindow" class="dateWindow">
-    <rect x="40" y="-5.5" width="34" height="11" rx="1.2"
-          fill="#000000"
+    <!-- two equal halves (17 wide each, centres at 48.5 / 65.5), no divider -->
+    <rect class="dwHalf" x="40"   y="-5.5" width="17.1" height="11" rx="1.2" fill="#000000"/>
+    <rect class="dwHalf" x="56.9" y="-5.5" width="17.1" height="11" rx="1.2" fill="#000000"/>
+    <rect class="dwFrame" x="40" y="-5.5" width="34" height="11" rx="1.2"
+          fill="none"
           stroke="#bdf9d6"
           stroke-opacity="0.7"
           stroke-width="0.5"
@@ -851,8 +918,11 @@
 
   <!-- ================= DATE WINDOW ================= -->
   <g id="fDateWindow" class="dateWindow">
-    <rect x="40" y="-5.5" width="34" height="11" rx="1.2"
-          fill="#000000"
+    <!-- two equal halves (17 wide each, centres at 48.5 / 65.5), no divider -->
+    <rect class="dwHalf" x="40"   y="-5.5" width="17.1" height="11" rx="1.2" fill="#000000"/>
+    <rect class="dwHalf" x="56.9" y="-5.5" width="17.1" height="11" rx="1.2" fill="#000000"/>
+    <rect class="dwFrame" x="40" y="-5.5" width="34" height="11" rx="1.2"
+          fill="none"
           stroke="#bdf9d6"
           stroke-opacity="0.7"
           stroke-width="0.5"
@@ -937,6 +1007,8 @@
 
 </svg>
 
+</div><!-- /#stage -->
+
 <script>
 (function () {
   const NS = 'http://www.w3.org/2000/svg';
@@ -947,10 +1019,85 @@
     return e;
   };
 
+  /* drag-cancel hooks: the zoom gesture (pinch) calls these so a bezel that is
+     being turned by one finger lets go cleanly when a second finger arrives */
+  const cancelDrags = [];
+
   const polar = (r, deg) => {
     const a = deg * Math.PI / 180;
     return [ +(Math.sin(a) * r).toFixed(3), +(-Math.cos(a) * r).toFixed(3) ];
   };
+
+  /* =========================================================
+     INK CENTERING
+     Puts the *visible* glyph shapes (not the font's advance box) exactly on
+     a given centre point. This removes the offset caused by side bearings,
+     trailing letter-spacing and different fallback fonts. Measured with a
+     canvas at 40x scale, re-measured once the web fonts have loaded.
+     ========================================================= */
+  const inkCtx   = document.createElement('canvas').getContext('2d');
+  const INK_S    = 40;
+  let   inkGen   = 0;                        // bumped when fonts finish loading
+
+  function centerInk(el, cx, cy, vref) {
+    const str = el.textContent;
+    if (!str || !inkCtx) return;
+    const key = str + '|' + inkGen;
+    if (el._inkKey === key) return;
+    el._inkKey = key;
+
+    const fam    = el.getAttribute('font-family');
+    const size   = parseFloat(el.getAttribute('font-size'));
+    const weight = el.getAttribute('font-weight') || '400';
+    const sp     = parseFloat(el.getAttribute('letter-spacing')) || 0;
+
+    inkCtx.font         = weight + ' ' + (size * INK_S) + 'px ' + fam;
+    inkCtx.textAlign    = 'left';
+    inkCtx.textBaseline = 'alphabetic';
+
+    const first = inkCtx.measureText(str[0]);
+    const last  = inkCtx.measureText(str[str.length - 1]);
+    const pre   = str.length > 1 ? inkCtx.measureText(str.slice(0, -1)).width : 0;
+    const vm    = inkCtx.measureText(vref || str);
+
+    const inkL = -first.actualBoundingBoxLeft / INK_S;
+    const inkR = pre / INK_S + sp * (str.length - 1) + last.actualBoundingBoxRight / INK_S;
+    const inkT = vm.actualBoundingBoxAscent  / INK_S;      // above baseline
+    const inkB = vm.actualBoundingBoxDescent / INK_S;      // below baseline
+
+    if (![inkL, inkR, inkT, inkB].every(isFinite) || inkR <= inkL) return;
+
+    el.setAttribute('text-anchor', 'start');
+    el.setAttribute('dominant-baseline', 'alphabetic');
+    el.setAttribute('x', (cx - (inkL + inkR) / 2).toFixed(3));
+    el.setAttribute('y', (cy + (inkT - inkB) / 2).toFixed(3));
+  }
+
+  const DIGITS = '0123456789';
+  const CAPS   = 'MONTUEWDHFRISA';
+
+  /* things that never change their text: centre now and after fonts load */
+  function centerStatic() {
+    const blood = document.getElementById('bloodText');
+    if (blood) centerInk(blood, 0, 0);
+    ['chronoCText', 'fChronoCText'].forEach(id => {
+      const e = document.getElementById(id);
+      if (e) centerInk(e, 57, 0, DIGITS);
+    });
+  }
+  centerStatic();
+
+  if (document.fonts) {
+    const refresh = () => { inkGen++; centerStatic(); };
+    Promise.all([
+      document.fonts.load("700 23px 'Oswald'"),
+      document.fonts.load("600 12px 'Oswald'")
+    ]).then(refresh, () => {});
+    document.fonts.ready.then(refresh, () => {});
+    if (document.fonts.addEventListener)
+      document.fonts.addEventListener('loadingdone', refresh);
+  }
+  window.addEventListener('load', () => { inkGen++; centerStatic(); });
 
   /* ================= TACTICAL FONT ================= */
   const TACTICAL_FONT =
@@ -1304,6 +1451,7 @@
 
   bezelHits[0].addEventListener('pointerdown', e => onBezelDown(svgWatch, e));
   bezelHits[1].addEventListener('pointerdown', e => onBezelDown(svgFace,  e));
+  cancelDrags.push(() => onBezelUp());
 
   /* wheel + double-click reset (desktop niceties) */
   bezelHits.forEach(hit => {
@@ -1482,6 +1630,12 @@
 
       if (c.date.textContent    !== day) c.date.textContent    = day;
       if (c.weekday.textContent !== wd)  c.weekday.textContent = wd;
+
+      /* keep each read-out centred in its half of the box (cached per text) */
+      centerInk(c.weekday, 48.5, 0, CAPS);
+      centerInk(c.date,    65.5, 0, DIGITS);
+      centerInk(c.cH,      48.5, 0, DIGITS);
+      centerInk(c.cM,      65.5, 0, DIGITS);
     }
 
     requestAnimationFrame(run);
@@ -1661,6 +1815,7 @@
       e.preventDefault();
       applyCompassBezel(0);
     });
+    cancelDrags.push(() => bUp());
 
     /* =====================  CARD : motion sensor  ===================== */
     let target = 0;      // heading we want to show (° clockwise from north)
@@ -1838,6 +1993,221 @@
   /* safety: releasing the pointer anywhere on the page ends the backlight */
   window.addEventListener('pointerup',     e => { endCrown(e); endBtn(e); });
   window.addEventListener('pointercancel', e => { endCrown(e); endBtn(e); });
+
+  /* =========================================================
+     ZOOM & PAN  (self-contained; only scales/moves #stage)
+       PC     : mouse wheel zooms at the cursor (over a bezel the wheel still
+                turns the bezel - hold Ctrl/Cmd there to zoom instead),
+                trackpad pinch (Ctrl+wheel), drag the dial/background to pan,
+                double-click zooms in / back out, keys + - 0
+       Phone  : two-finger pinch zooms (and pans while pinching),
+                one-finger drag pans when zoomed, double-tap zooms in / out
+     Bezels, crown, pushers and the corner buttons keep their own gestures.
+     ========================================================= */
+  (function setupZoom() {
+    const stage = document.getElementById('stage');
+    const root  = document.documentElement;
+    if (!stage) return;
+
+    const MIN_Z = 1, MAX_Z = 8, DBL_Z = 2.5;
+    const TAP_MS = 300, TAP_PX = 8, DTAP_MS = 350, DTAP_PX = 30;
+
+    let z = 1, tx = 0, ty = 0;                 // scale and screen-pixel offset
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+    /* untransformed centre of the stage (layout values ignore transforms) */
+    const centre = () => [ stage.offsetLeft + stage.offsetWidth  / 2,
+                           stage.offsetTop  + stage.offsetHeight / 2 ];
+
+    let animTimer = 0;
+    function apply(animate) {
+      /* keep the picture covering the screen; smaller than the screen = centred */
+      const vw = root.clientWidth, vh = root.clientHeight;
+      const mx = Math.max(0, (stage.offsetWidth  * z - vw) / 2);
+      const my = Math.max(0, (stage.offsetHeight * z - vh) / 2);
+      tx = clamp(tx, -mx, mx);
+      ty = clamp(ty, -my, my);
+
+      clearTimeout(animTimer);
+      if (animate) {
+        stage.style.transition = 'transform 0.18s ease-out';
+        animTimer = setTimeout(() => { stage.style.transition = ''; }, 220);
+      } else {
+        stage.style.transition = '';
+      }
+      stage.style.transform =
+        'translate(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px) scale(' + z.toFixed(4) + ')';
+      root.classList.toggle('zoomed', z > 1.001);
+    }
+
+    /* zoom to scale s2 keeping the screen point (px,py) fixed */
+    function zoomAt(px, py, s2, animate) {
+      s2 = clamp(s2, MIN_Z, MAX_Z);
+      const c  = centre();
+      const lx = (px - c[0] - tx) / z;         // point under the finger / cursor,
+      const ly = (py - c[1] - ty) / z;         // in unscaled stage units
+      z  = s2;
+      tx = px - c[0] - lx * z;
+      ty = py - c[1] - ly * z;
+      apply(animate);
+    }
+
+    const closest   = (t, sel) => (t && t.closest) ? t.closest(sel) : null;
+    const isButton  = t => !!closest(t, 'button');
+    const isControl = t => !!closest(t, '#bezelHit, #fBezelHit, #compassBezelHit, #crown, .pusher');
+    const BEZELS    = '#bezelHit, #fBezelHit, #compassBezelHit';
+
+    /* ---------- wheel / trackpad pinch ---------- */
+    window.addEventListener('wheel', e => {
+      if (isButton(e.target)) return;
+      const modKey = e.ctrlKey || e.metaKey;
+      if (!modKey && closest(e.target, BEZELS)) return;      // bezel keeps its own wheel
+      e.preventDefault();
+      e.stopPropagation();                                   // and Ctrl+wheel never turns it
+      let dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      dy = clamp(dy, -250, 250);
+      zoomAt(e.clientX, e.clientY, z * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)), false);
+    }, { passive: false, capture: true });
+
+    /* ---------- pointers: pan, pinch, double tap ---------- */
+    const pts = new Map();         // pointerId -> state
+    let mode  = 'none';            // 'none' | 'pan' | 'pinch'
+    let pinch = null;
+    let lastTap = { t: 0, x: 0, y: 0 };
+
+    function startPinch() {
+      const two = [];
+      pts.forEach((p, id) => { if (p.type !== 'mouse' && two.length < 2) two.push(id); });
+      if (two.length < 2) return;
+      cancelDrags.forEach(f => f());                         // let go of any bezel drag
+      const a = pts.get(two[0]), b = pts.get(two[1]);
+      const c  = centre();
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      pinch = {
+        a: two[0], b: two[1],
+        d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        s0: z,
+        lx: (mx - c[0] - tx) / z,
+        ly: (my - c[1] - ty) / z
+      };
+      a.moved = b.moved = true;
+      mode = 'pinch';
+      root.classList.remove('panning');
+    }
+
+    function updatePinch() {
+      const a = pts.get(pinch.a), b = pts.get(pinch.b);
+      if (!a || !b) return;
+      const c  = centre();
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const d  = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+      z  = clamp(pinch.s0 * d / pinch.d0, MIN_Z, MAX_Z);
+      tx = mx - c[0] - pinch.lx * z;                         // midpoint drags the picture
+      ty = my - c[1] - pinch.ly * z;
+      apply(false);
+    }
+
+    window.addEventListener('pointerdown', e => {
+      if (isButton(e.target)) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const control = isControl(e.target);
+      pts.set(e.pointerId, {
+        type: e.pointerType, x: e.clientX, y: e.clientY,
+        sx: e.clientX, sy: e.clientY, t: performance.now(),
+        free:  !control,                                     // may start a pan
+        tapOk: !control && e.target.id !== 'compassTap',     // may count as a tap
+        moved: false
+      });
+      if (pts.size >= 2 && mode !== 'pinch') startPinch();
+    }, true);
+
+    window.addEventListener('pointermove', e => {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+
+      if (mode === 'pinch') {
+        if (pinch && (e.pointerId === pinch.a || e.pointerId === pinch.b)) updatePinch();
+        return;
+      }
+      if (!p.free || pts.size !== 1) return;                 // a bezel/crown finger: not ours
+
+      if (!p.moved) {
+        if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < TAP_PX) return;
+        p.moved = true;                                      // no longer a tap
+        if (z > 1.001) {
+          mode = 'pan';
+          root.classList.add('panning');
+          if (e.pointerType === 'mouse') { try { root.setPointerCapture(e.pointerId); } catch (_) {} }
+          tx += e.clientX - p.sx;                            // catch up with the dead zone
+          ty += e.clientY - p.sy;
+          apply(false);
+        }
+        return;
+      }
+      if (mode === 'pan') { tx += dx; ty += dy; apply(false); }
+    }, true);
+
+    function endPointer(e) {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      pts.delete(e.pointerId);
+
+      if (mode === 'pinch') {
+        if (pinch && (e.pointerId === pinch.a || e.pointerId === pinch.b)) {
+          mode = 'none'; pinch = null;
+          /* a finger that is still down carries on as a pan (no tap, no jump) */
+          pts.forEach(q => { q.sx = q.x; q.sy = q.y; q.moved = true; });
+          if (pts.size === 1) {
+            const q = pts.values().next().value;
+            if (q.free && z > 1.001) { mode = 'pan'; root.classList.add('panning'); }
+          }
+          if (mode !== 'pan') root.classList.remove('panning');
+        }
+        return;
+      }
+
+      if (pts.size === 0) { mode = 'none'; root.classList.remove('panning'); }
+
+      if (e.type === 'pointerup' && p.tapOk && !p.moved &&
+          performance.now() - p.t < TAP_MS) {
+        const now = performance.now();
+        if (now - lastTap.t < DTAP_MS &&
+            Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < DTAP_PX) {
+          lastTap.t = 0;
+          zoomAt(e.clientX, e.clientY, z > 1.05 ? 1 : DBL_Z, true);   // double tap / click
+        } else {
+          lastTap = { t: now, x: e.clientX, y: e.clientY };
+        }
+      }
+    }
+    window.addEventListener('pointerup',     endPointer, true);
+    window.addEventListener('pointercancel', endPointer, true);
+
+    /* a lost release (pointer let go outside the window) must never leave a
+       ghost finger behind that would turn the next touch into a pinch */
+    function resetPointers() {
+      pts.clear(); pinch = null; mode = 'none';
+      root.classList.remove('panning');
+    }
+    window.addEventListener('blur', resetPointers);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) resetPointers(); });
+
+    /* ---------- keyboard ---------- */
+    window.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const cx = root.clientWidth / 2, cy = root.clientHeight / 2;
+      if (e.key === '+' || e.key === '=')      zoomAt(cx, cy, z * 1.25, true);
+      else if (e.key === '-' || e.key === '_') zoomAt(cx, cy, z / 1.25, true);
+      else if (e.key === '0')                  zoomAt(cx, cy, 1, true);
+    });
+
+    /* ---------- keep everything valid when the size changes ---------- */
+    window.addEventListener('resize', () => apply(false));
+    window.addEventListener('orientationchange', () => apply(false));
+    if (window.ResizeObserver) new ResizeObserver(() => apply(false)).observe(stage);
+  })();
 })();
 </script>
 
