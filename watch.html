@@ -101,9 +101,61 @@
     -webkit-touch-callout: none;
     touch-action: none;
   }
-  #modeToggle   { top: 16px; right: auto; left: 16px; }
-  #viewToggle   { top: 58px; right: auto; left: 16px; }
+  #modeToggle   { top: 58px;  right: auto; left: 16px; }
+  #viewToggle   { top: 100px; right: auto; left: 16px; }
   #backlightBtn { top: 16px; }
+
+  /* ================= HIDE-UI BUTTON (top left, above the others) ================= */
+  #hideUiBtn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 101;
+    box-sizing: border-box;
+    width: 110px;
+    height: 34px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+    background: #161616;
+    color: #c6fad9;
+    font-family: 'Oswald', 'Bahnschrift Condensed', 'DIN Condensed',
+                 'Arial Narrow', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+                width 0.2s ease, height 0.2s ease, padding 0.2s ease;
+    -webkit-touch-callout: none;
+    touch-action: none;
+  }
+  #hideUiBtn:hover  { background: #262626; }
+  #hideUiBtn:active { transform: translateY(1px); }
+
+  /* collapsed: small square with a middle dot, every other button hidden */
+  html.ui-hidden #hideUiBtn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 18px;
+    letter-spacing: 0;
+    border-radius: 4px;
+  }
+  html.ui-hidden #modeToggle,
+  html.ui-hidden #viewToggle,
+  html.ui-hidden #backlightBtn,
+  html.ui-hidden #chronoStartBtn,
+  html.ui-hidden #chronoResetBtn { display: none; }
+
+  html.light-mode #hideUiBtn {
+    background: #ffffff;
+    color: #111111;
+    border-color: #999999;
+  }
+  html.light-mode #hideUiBtn:hover { background: #f0f0f0; }
 
   /* ================= CHRONOGRAPH CORNER BUTTONS ================= */
   #chronoStartBtn,
@@ -284,6 +336,7 @@
 </head>
 <body>
 
+<button id="hideUiBtn"    type="button" aria-pressed="false" aria-label="Hide / show buttons">Hide</button>
 <button id="modeToggle"   type="button" aria-pressed="false">Light</button>
 <button id="viewToggle"   type="button" aria-pressed="false">Watch Face</button>
 <button id="backlightBtn" type="button" aria-pressed="false">Backlight</button>
@@ -1908,6 +1961,17 @@
       requestAnimationFrame(loop);
     })();
   })();
+
+  /* =========================================================
+     HIDE / SHOW ALL BUTTONS
+     ========================================================= */
+  const hideBtn = document.getElementById('hideUiBtn');
+
+  hideBtn.addEventListener('click', () => {
+    const hidden = document.documentElement.classList.toggle('ui-hidden');
+    hideBtn.textContent = hidden ? '\u00B7' : 'Hide';
+    hideBtn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+  });
 
   /* =========================================================
      LIGHT / DARK MODE TOGGLE
