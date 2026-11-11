@@ -29,6 +29,10 @@
         --prompt: #33ff33;
         --border: #222222;
         --dot-red: #ff5f56;
+        /* one font size for everything typed and printed in the terminal */
+        --term-font: 1rem;
+        /* margin between the terminal and the edges of the page (phones) */
+        --edge: 3vw;
     }
 
     html {
@@ -142,7 +146,7 @@
         overscroll-behavior: contain;
         padding: 0.5rem 1.5rem 0.2rem 1.5rem;
         background: var(--bg);
-        font-size: 1rem;
+        font-size: var(--term-font);
         line-height: 1.6;
         scroll-behavior: smooth;
     }
@@ -241,11 +245,12 @@
         gap: 0.6rem;
     }
 
-    /* 16px minimum: iOS Safari zooms the whole page when an input below
-       16px gets focus, which is another way the terminal ended up clipped */
+    /* The prompt and the input use the same size as the output text.
+       On phones that size is 16px: iOS Safari zooms the whole page when an
+       input below 16px gets focus, so the whole terminal uses 16px there. */
     .input-line .prompt {
         color: var(--prompt);
-        font-size: max(16px, 1rem);
+        font-size: var(--term-font);
         font-family: 'Share Tech Mono', monospace;
         flex-shrink: 0;
     }
@@ -257,7 +262,7 @@
         outline: none;
         color: var(--fg);
         font-family: 'Share Tech Mono', monospace;
-        font-size: max(16px, 1rem);
+        font-size: var(--term-font);
         padding: 0.1rem 0;
         caret-color: var(--prompt);
         min-width: 0;
@@ -271,17 +276,25 @@
     @media (max-width: 640px) {
         :root {
             font-size: 14px;
+            --term-font: 16px;
         }
-        /* The terminal's top and bottom edges sit on the top and bottom of the
-           visible page; only the sides keep a margin. Safe-area insets keep it
-           clear of notches / the home indicator, and the bottom one is dropped
-           while the keyboard is open (the keyboard covers that area anyway). */
+        /* A small margin (--edge) on all four sides. Where a notch or the
+           home indicator needs more room, the safe-area inset wins. */
         body {
-            padding: env(safe-area-inset-top) calc(3vw + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(3vw + env(safe-area-inset-left));
+            padding:
+                max(env(safe-area-inset-top), var(--edge))
+                max(env(safe-area-inset-right), var(--edge))
+                max(env(safe-area-inset-bottom), var(--edge))
+                max(env(safe-area-inset-left), var(--edge));
             align-items: stretch;
         }
-        html.kb-open body {
-            padding-bottom: 0;
+        /* While typing on a phone the keyboard covers the bottom of the screen
+           (and the home indicator), so only the small margin is kept there.
+           html.typing is set from the input's focus state, so this does not
+           depend on measuring the viewport. */
+        html.kb-open body,
+        html.typing body {
+            padding-bottom: var(--edge);
         }
         .terminal {
             height: 100%;
@@ -294,7 +307,8 @@
         .input-line {
             padding: 0.4rem 1rem 0.8rem 1rem;
         }
-        html.kb-open .input-line {
+        html.kb-open .input-line,
+        html.typing .input-line {
             padding-bottom: 0.5rem;
         }
         .titlebar {
@@ -312,10 +326,7 @@
     @media (max-width: 400px) {
         :root {
             font-size: 12px;
-        }
-        body {
-            padding-left: calc(2.5vw + env(safe-area-inset-left));
-            padding-right: calc(2.5vw + env(safe-area-inset-right));
+            --edge: 2.5vw;
         }
         .terminal {
             border-radius: 6px;
@@ -740,8 +751,16 @@
                 input.focus({ preventScroll: true });
             });
 
+            // ── typing state (on phones: the keyboard is up) ──
+            function syncTyping() {
+                root.classList.toggle('typing', document.activeElement === input);
+            }
+            input.addEventListener('focus', syncTyping);
+            input.addEventListener('blur', syncTyping);
+
             // ── init ──
             syncViewport();
+            syncTyping();
             showWelcome();
 
             setTimeout(() => {
