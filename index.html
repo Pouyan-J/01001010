@@ -4,458 +4,481 @@
 <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>P74 Tools</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
-	
-	<link rel="icon" href="icon.ico" />
+
+    <link rel="icon" href="icon.ico" />
 
     <style>
     /* ── reset & base ── */
     * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-	}
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-	:root {
-		font-size: 16px;
-		--bg: #000000;
-		--fg: #f0f0f0;
-		--dim: #666666;
-		--prompt: #33ff33;
-		--border: #222222;
-		--dot-red: #ff5f56;
-		--dot-yellow: #ffbd2e;
-		--dot-green: #27c93f;
-	}
+    :root {
+        font-size: 16px;
+        --bg: #000000;
+        --fg: #f0f0f0;
+        --dim: #666666;
+        --prompt: #33ff33;
+        --border: #222222;
+        --dot-red: #ff5f56;
+        /* one font size for everything typed and printed in the terminal */
+        --term-font: 1rem;
+        /* margin between the terminal and the edges of the page (phones) */
+        --edge: 3vw;
+    }
 
-	html,
-	body {
-		height: 100%;
-		overflow: hidden;
-	}
+    html {
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+    }
 
-	body {
-		background: var(--bg);
-		color: var(--fg);
-		font-family: 'Share Tech Mono', monospace;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 2vw;
-		margin: 0;
-	}
+    /*
+     * The body is pinned to the *visible* viewport. --vv-h and --vv-top are
+     * kept up to date by the script (window.visualViewport), so when a mobile
+     * keyboard opens the terminal shrinks to the space above it and its top
+     * and bottom edges stay on the edges of what the user can see.
+     * Before the script runs (or without visualViewport) it falls back to the
+     * whole dynamic viewport.
+     */
+    body {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: var(--vv-top, 0px);
+        height: var(--vv-h, 100dvh);
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: 'Share Tech Mono', monospace;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2vw;
+        margin: 0;
+    }
 
-	/* ── terminal window ── */
-	.terminal {
-		width: 100%;
-		max-width: 840px;
-		height: 90vh;
-		max-height: 700px;
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		overflow: hidden;
-		/* removed box-shadow to eliminate glow */
-		display: flex;
-		flex-direction: column;
-	}
+    /* ── terminal window ── */
+    .terminal {
+        width: 100%;
+        max-width: 840px;
+        height: 90%;
+        max-height: 700px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
 
-	/* ── title bar ── */
-	.titlebar {
-		display: flex;
-		align-items: center;
-		padding: 0.7rem 1.2rem;
-		background: #0a0a0a;
-		border-bottom: 1px solid var(--border);
-		user-select: none;
-		flex-shrink: 0;
-	}
+    /* ── title bar ── */
+    .titlebar {
+        display: flex;
+        align-items: center;
+        padding: 0.7rem 1.2rem;
+        background: #0a0a0a;
+        border-bottom: 1px solid var(--border);
+        user-select: none;
+        flex-shrink: 0;
+    }
 
-	.titlebar .label {
-		font-size: 0.8rem;
-		color: var(--dim);
-		letter-spacing: 0.04em;
-		opacity: 0.7;
-		font-family: 'Share Tech Mono', monospace;
-	}
+    .titlebar .label {
+        font-size: 0.8rem;
+        color: var(--dim);
+        letter-spacing: 0.04em;
+        opacity: 0.7;
+        font-family: 'Share Tech Mono', monospace;
+    }
 
-	.dots {
-		display: flex;
-		gap: 0.55rem;
-		margin-left: auto;
-		flex-shrink: 0;
-	}
+    .dots {
+        display: flex;
+        gap: 0.55rem;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
 
-	.dot {
-		width: 13px;
-		height: 13px;
-		border-radius: 50%;
-		display: block;
-		flex-shrink: 0;
-	}
-	.dot.red {
-		background: var(--dot-red);
-	}
-	.dot.yellow {
-		background: var(--dot-yellow);
-	}
-	.dot.green {
-		background: var(--dot-green);
-	}
+    .dot {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        display: block;
+        flex-shrink: 0;
+    }
+    /* the red dot is a real button: it closes the tab, same as `exit` */
+    button.dot {
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .dot.red {
+        position: relative;
+        background: var(--dot-red);
+    }
+    /* invisible, larger touch target around the small dot */
+    .dot.red::after {
+        content: '';
+        position: absolute;
+        inset: -10px;
+    }
+    .dot.red:hover {
+        filter: brightness(1.15);
+    }
+    .dot.red:focus-visible {
+        outline: 2px solid var(--fg);
+        outline-offset: 2px;
+    }
 
-	/* ── output area ── */
-	.output {
-		flex: 1;
-		overflow-y: auto;
-		padding: 0.5rem 1.5rem 0.2rem 1.5rem;
-		background: var(--bg);
-		font-size: 1rem;
-		line-height: 1.6;
-		scroll-behavior: smooth;
-	}
+    /* ── output area ── */
+    .output {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 0.5rem 1.5rem 0.2rem 1.5rem;
+        background: var(--bg);
+        font-size: var(--term-font);
+        line-height: 1.6;
+        scroll-behavior: smooth;
+    }
 
-	.output::-webkit-scrollbar {
-		width: 6px;
-	}
-	.output::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.output::-webkit-scrollbar-thumb {
-		background: var(--border);
-		border-radius: 4px;
-	}
-	.output::-webkit-scrollbar-thumb:hover {
-		background: var(--dim);
-	}
+    .output::-webkit-scrollbar {
+        width: 6px;
+    }
+    .output::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .output::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+    }
+    .output::-webkit-scrollbar-thumb:hover {
+        background: var(--dim);
+    }
 
-	/* ── sticky header (always visible) ── */
-	.sticky-header {
-		position: sticky;
-		top: 0;
-		background: var(--bg);
-		z-index: 2;
-		padding: 0.6rem 0 0.8rem 0;
-		border-bottom: 1px solid var(--border);
-		margin-bottom: 0.8rem;
-	}
+    /* ── welcome message / inline links ── */
+    .output a {
+        color: var(--fg);
+        text-decoration: underline;
+        text-underline-offset: 0.15em;
+    }
 
-	.sticky-header .title {
-		font-size: 1.8rem;
-		color: var(--fg);
-	}
-	.sticky-header .title span {
-		color: var(--prompt);
-	}
-	.sticky-header .hint {
-		color: var(--dim);
-		font-size: 0.85rem;
-		margin-top: 0.4rem;
-		opacity: 0.6;
-	}
+    .output a:hover {
+        color: var(--prompt);
+    }
 
-	.sticky-header .cmd-grid {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.8rem 1.8rem;
-		margin-top: 0.7rem;
-		padding: 0.3rem 0;
-	}
+    .output .hl {
+        color: var(--prompt);
+    }
 
-	.sticky-header .cmd-grid a {
-		color: var(--fg);
-		text-decoration: none;
-		font-size: 1rem;
-		transition: color 0.2s;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-	}
+    /* ── dynamic lines ── */
+    .output .line {
+        white-space: pre-wrap;
+        word-break: break-word;
+        padding: 0.05rem 0;
+    }
 
-	.sticky-header .cmd-grid a .prompt-symbol {
-		color: var(--prompt);
-		font-weight: 400;
-	}
+    /* empty lines (spacers in `help`) still need a line box to have height */
+    .output .line:empty::after {
+        content: '\00a0';
+    }
 
-	.sticky-header .cmd-grid a:hover {
-		color: var(--prompt);
-	}
+    .output .line.prompt-line {
+        color: var(--fg);
+    }
 
-	.sticky-header .cmd-grid a .cmd-name {
-		border-bottom: 1px solid transparent;
-		transition: border-color 0.2s;
-	}
-	.sticky-header .cmd-grid a:hover .cmd-name {
-		border-bottom-color: var(--prompt);
-	}
+    .output .line.prompt-line .prompt-symbol {
+        color: var(--prompt);
+    }
 
-	.sticky-header .cmd-grid a .cmd-desc {
-		color: var(--dim);
-		font-size: 0.8rem;
-		margin-left: 0.3rem;
-	}
-	.sticky-header .cmd-grid a:hover .cmd-desc {
-		color: var(--dim);
-	}
+    .output .line.output-line {
+        color: var(--fg);
+        padding-left: 0.5rem;
+    }
 
-	/* ── dynamic lines ── */
-	.output .line {
-		white-space: pre-wrap;
-		word-break: break-word;
-		padding: 0.05rem 0;
-	}
+    .output .line.output-line.dim {
+        color: var(--dim);
+    }
 
-	.output .line.prompt-line {
-		color: var(--fg);
-	}
+    .output .line.output-line.error {
+        color: #ff6b6b;
+    }
 
-	.output .line.prompt-line .prompt-symbol {
-		color: var(--prompt);
-	}
+    .output .line.output-line.success {
+        color: var(--prompt);
+    }
 
-	.output .line.output-line {
-		color: var(--fg);
-		padding-left: 0.5rem;
-	}
+    .output .line.output-line.help {
+        color: var(--fg);
+    }
 
-	.output .line.output-line.dim {
-		color: var(--dim);
-	}
+    .output .line.output-line.help .cmd-name {
+        color: #66d9ff;
+    }
 
-	.output .line.output-line.error {
-		color: #ff6b6b;
-	}
+    .output .line.output-line.help .cmd-desc {
+        color: var(--dim);
+    }
 
-	.output .line.output-line.success {
-		color: var(--prompt);
-	}
+    /* the actual apps in `help` (name and description) are bold */
+    .output .line.output-line.help.app {
+        font-weight: bold;
+    }
 
-	.output .line.output-line.help {
-		color: var(--fg);
-	}
+    /* help entries are clickable: they type the command into the prompt */
+    .output .line[data-cmd] {
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .output .line[data-cmd]:hover .cmd-name {
+        color: var(--prompt);
+        text-decoration: underline;
+        text-underline-offset: 0.15em;
+    }
 
-	.output .line.output-line.help .cmd-name {
-		color: #66d9ff;
-	}
+    /* ── input line ── */
+    .input-line {
+        display: flex;
+        align-items: center;
+        padding: 0.6rem 1.5rem 1.2rem 1.5rem;
+        background: var(--bg);
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+        gap: 0.6rem;
+    }
 
-	.output .line.output-line.help .cmd-desc {
-		color: var(--dim);
-	}
+    /* The prompt and the input use the same size as the output text.
+       On phones that size is 16px: iOS Safari zooms the whole page when an
+       input below 16px gets focus, so the whole terminal uses 16px there. */
+    .input-line .prompt {
+        color: var(--prompt);
+        font-size: var(--term-font);
+        font-family: 'Share Tech Mono', monospace;
+        flex-shrink: 0;
+    }
 
-	/* ── input line ── */
-	.input-line {
-		display: flex;
-		align-items: center;
-		padding: 0.6rem 1.5rem 1.2rem 1.5rem;
-		background: var(--bg);
-		border-top: 1px solid var(--border);
-		flex-shrink: 0;
-		gap: 0.6rem;
-	}
+    /* input + autocomplete suggestion ("ghost" text) share one box */
+    .input-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+    }
 
-	.input-line .prompt {
-		color: var(--prompt);
-		font-size: 1rem;
-		font-family: 'Share Tech Mono', monospace;
-		flex-shrink: 0;
-	}
+    .input-line #command-input {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        width: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--fg);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: var(--term-font);
+        padding: 0.1rem 0;
+        caret-color: var(--prompt);
+        min-width: 0;
+    }
 
-	.input-line #command-input {
-		flex: 1;
-		background: transparent;
-		border: none;
-		outline: none;
-		color: var(--fg);
-		font-family: 'Share Tech Mono', monospace;
-		font-size: 1rem;
-		padding: 0.1rem 0;
-		caret-color: var(--prompt);
-		min-width: 0;
-	}
+    .input-line #command-input::selection {
+        background: rgba(51, 255, 51, 0.25);
+    }
 
-	.input-line #command-input::selection {
-		background: rgba(51, 255, 51, 0.25);
-	}
+    /* Sits exactly behind the input, same font and metrics. The part that is
+       already typed is invisible (it only takes up the space), the rest of the
+       suggested command is shown dimmed. */
+    .ghost {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        white-space: pre;
+        pointer-events: none;
+        user-select: none;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: var(--term-font);
+        padding: 0.1rem 0;
+        color: var(--dim);
+    }
+    .ghost .ghost-typed {
+        visibility: hidden;
+    }
 
-	/* ── responsive ── */
-	@media (max-width: 640px) {
-		:root {
-			font-size: 14px;
-		}
-		/* Add margins on mobile – body padding increased */
-		body {
-			padding: 3vh 3vw;
-		}
-		.terminal {
-			max-height: 88vh;
-			height: 88vh;
-			border-radius: 8px;
-		}
-		.output {
-			padding: 0.3rem 1rem 0.2rem 1rem;
-		}
-		.input-line {
-			padding: 0.4rem 1rem 0.8rem 1rem;
-		}
-		.titlebar {
-			padding: 0.5rem 0.8rem;
-		}
-		.dot {
-			width: 10px;
-			height: 10px;
-		}
-		.titlebar .label {
-			font-size: 0.65rem;
-		}
-		.sticky-header .title {
-			font-size: 1.4rem;
-		}
-		.sticky-header .cmd-grid {
-			gap: 0.4rem 1rem;
-		}
-		.sticky-header .cmd-grid a {
-			font-size: 0.9rem;
-		}
-		.sticky-header .cmd-grid a .cmd-desc {
-			display: none;
-		}
-	}
+    /* ── responsive ── */
+    @media (max-width: 640px) {
+        :root {
+            font-size: 14px;
+            --term-font: 16px;
+        }
+        /* A small margin (--edge) on all four sides. Where a notch or the
+           home indicator needs more room, the safe-area inset wins. */
+        body {
+            padding:
+                max(env(safe-area-inset-top), var(--edge))
+                max(env(safe-area-inset-right), var(--edge))
+                max(env(safe-area-inset-bottom), var(--edge))
+                max(env(safe-area-inset-left), var(--edge));
+            align-items: stretch;
+        }
+        /* While typing on a phone the keyboard covers the bottom of the screen
+           (and the home indicator), so only the small margin is kept there.
+           html.typing is set from the input's focus state, so this does not
+           depend on measuring the viewport. */
+        html.kb-open body,
+        html.typing body {
+            padding-bottom: var(--edge);
+        }
+        .terminal {
+            height: 100%;
+            max-height: none;
+            border-radius: 8px;
+        }
+        .output {
+            padding: 0.3rem 1rem 0.2rem 1rem;
+        }
+        .input-line {
+            padding: 0.4rem 1rem 0.8rem 1rem;
+        }
+        html.kb-open .input-line,
+        html.typing .input-line {
+            padding-bottom: 0.5rem;
+        }
+        .titlebar {
+            padding: 0.5rem 0.8rem;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+        }
+        .titlebar .label {
+            font-size: 0.65rem;
+        }
+    }
 
-	@media (max-width: 400px) {
-		:root {
-			font-size: 12px;
-		}
-		body {
-			padding: 2.5vh 2.5vw;
-		}
-		.terminal {
-			max-height: 85vh;
-			height: 85vh;
-			border-radius: 6px;
-		}
-		.output {
-			padding: 0.2rem 0.6rem 0.2rem 0.6rem;
-		}
-		.input-line {
-			padding: 0.3rem 0.6rem 0.6rem 0.6rem;
-		}
-		.sticky-header .title {
-			font-size: 1.2rem;
-		}
-		.sticky-header .cmd-grid a {
-			font-size: 0.8rem;
-		}
-	}
+    @media (max-width: 400px) {
+        :root {
+            font-size: 12px;
+            --edge: 2.5vw;
+        }
+        .terminal {
+            border-radius: 6px;
+        }
+        .output {
+            padding: 0.2rem 0.6rem 0.2rem 0.6rem;
+        }
+        .input-line {
+            padding: 0.3rem 0.6rem 0.6rem 0.6rem;
+        }
+    }
 
-	@media print {
-		body {
-			background: white;
-			padding: 1rem;
-		}
-		.terminal {
-			border-color: #ccc;
-			box-shadow: none;
-			height: auto;
-			max-height: none;
-			border-radius: 4px;
-		}
-		.titlebar {
-			background: #eee;
-			border-color: #ccc;
-		}
-		.titlebar .label {
-			color: #555;
-		}
-		.dot {
-			border: 1px solid #999;
-			background: #ccc !important;
-		}
-		.output {
-			background: white;
-			color: black;
-			overflow: visible;
-			padding: 1rem;
-		}
-		.sticky-header {
-			background: white;
-			border-color: #ccc;
-		}
-		.sticky-header .title {
-			color: black;
-		}
-		.sticky-header .title span {
-			color: #006600;
-		}
-		.sticky-header .hint {
-			color: #555;
-		}
-		.sticky-header .cmd-grid a {
-			color: black;
-		}
-		.sticky-header .cmd-grid a .prompt-symbol {
-			color: #006600;
-		}
-		.sticky-header .cmd-grid a .cmd-desc {
-			color: #555;
-		}
-		.sticky-header .cmd-grid a:hover .cmd-name {
-			border-bottom-color: #006600;
-		}
-		.output .line {
-			color: black !important;
-		}
-		.output .line.prompt-line .prompt-symbol {
-			color: #006600 !important;
-		}
-		.output .line.output-line.dim {
-			color: #555 !important;
-		}
-		.output .line.output-line.error {
-			color: #cc0000 !important;
-		}
-		.output .line.output-line.success {
-			color: #006600 !important;
-		}
-		.output .line.output-line.help .cmd-name {
-			color: #0055aa !important;
-		}
-		.output .line.output-line.help .cmd-desc {
-			color: #555 !important;
-		}
-		.input-line {
-			border-color: #ccc;
-			background: white;
-			padding: 0.5rem 1rem;
-		}
-		.input-line .prompt {
-			color: #006600 !important;
-		}
-		.input-line #command-input {
-			color: black;
-			caret-color: black;
-		}
-		.input-line #command-input::selection {
-			background: #ccc;
-		}
-	}
+    @media print {
+        html,
+        body {
+            height: auto;
+            overflow: visible;
+        }
+        body {
+            position: static;
+            background: white;
+            padding: 1rem;
+        }
+        .terminal {
+            border-color: #ccc;
+            box-shadow: none;
+            height: auto;
+            max-height: none;
+            border-radius: 4px;
+        }
+        .titlebar {
+            background: #eee;
+            border-color: #ccc;
+        }
+        .titlebar .label {
+            color: #555;
+        }
+        .dot {
+            border: 1px solid #999;
+            background: #ccc !important;
+        }
+        .output {
+            background: white;
+            color: black;
+            overflow: visible;
+            padding: 1rem;
+        }
+        .output .line {
+            color: black !important;
+        }
+        .output .line.prompt-line .prompt-symbol {
+            color: #006600 !important;
+        }
+        .output a {
+            color: #0055aa;
+        }
+        .output .hl {
+            color: #006600;
+        }
+        .output .line.output-line.dim {
+            color: #555 !important;
+        }
+        .output .line.output-line.error {
+            color: #cc0000 !important;
+        }
+        .output .line.output-line.success {
+            color: #006600 !important;
+        }
+        .output .line.output-line.help .cmd-name {
+            color: #0055aa !important;
+        }
+        .output .line.output-line.help .cmd-desc {
+            color: #555 !important;
+        }
+        .ghost {
+            display: none;
+        }
+        .input-line {
+            border-color: #ccc;
+            background: white;
+            padding: 0.5rem 1rem;
+        }
+        .input-line .prompt {
+            color: #006600 !important;
+        }
+        .input-line #command-input {
+            color: black;
+            caret-color: black;
+        }
+        .input-line #command-input::selection {
+            background: #ccc;
+        }
+    }
     </style>
 </head>
 
 <body>
 
-    <div class="terminal">
+    <div class="terminal" id="terminal">
 
         <!-- title bar -->
         <div class="titlebar">
             <span class="label">p74-tools</span>
             <span class="dots">
-                <span class="dot red"></span>
-                <span class="dot yellow"></span>
-                <span class="dot green"></span>
+                <button type="button" class="dot red" id="close-btn" aria-label="Close tab" title="Close tab"></button>
             </span>
         </div>
 
@@ -465,7 +488,10 @@
         <!-- input line -->
         <div class="input-line">
             <span class="prompt">$</span>
-            <input type="text" id="command-input" autofocus autocomplete="off" spellcheck="false" />
+            <div class="input-wrap">
+                <span class="ghost" id="ghost" aria-hidden="true"><span class="ghost-typed" id="ghost-typed"></span><span class="ghost-rest" id="ghost-rest"></span></span>
+                <input type="text" id="command-input" autofocus autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" />
+            </div>
         </div>
 
     </div>
@@ -473,80 +499,184 @@
     <script>
         (function() {
             // ── DOM refs ──
+            const root = document.documentElement;
+            const terminal = document.getElementById('terminal');
             const output = document.getElementById('output');
             const input = document.getElementById('command-input');
+            const ghost = document.getElementById('ghost');
+            const ghostTyped = document.getElementById('ghost-typed');
+            const ghostRest = document.getElementById('ghost-rest');
 
             // ── state ──
-            let history = [];
+            const cmdHistory = [];
             let historyIndex = -1;
 
+            // ── visible viewport (mobile keyboard) ──
+            // The layout viewport does not shrink when a mobile keyboard opens
+            // (iOS never, Android Chrome by default), so 100vh-based sizing ends
+            // up partly behind the keyboard. Instead the page is pinned to the
+            // visual viewport: --vv-h is the visible height, --vv-top the
+            // distance the browser has scrolled the visible area down.
+            const vv = window.visualViewport;
+
+            function syncViewport() {
+                const h = vv ? vv.height : window.innerHeight;
+                const top = vv ? vv.offsetTop : 0;
+                root.style.setProperty('--vv-h', h + 'px');
+                root.style.setProperty('--vv-top', top + 'px');
+                root.classList.toggle('kb-open', window.innerHeight - h > 120);
+                scrollToBottom();
+            }
+
+            if (vv) {
+                vv.addEventListener('resize', syncViewport);
+                vv.addEventListener('scroll', syncViewport);
+            }
+            window.addEventListener('resize', syncViewport);
+            window.addEventListener('orientationchange', syncViewport);
+
             // ── helpers ──
+            function escapeHtml(str) {
+                return String(str).replace(/[&<>"']/g, ch => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[ch]));
+            }
+
             function scrollToBottom() {
                 output.scrollTop = output.scrollHeight;
             }
 
-            function appendLine(text, className = '') {
+            // `html` is trusted markup. Anything the user typed must go through
+            // escapeHtml() before it gets here.
+            function appendLine(html, className = '') {
                 const div = document.createElement('div');
                 div.className = 'line ' + className;
-                div.innerHTML = text;
+                div.innerHTML = html;
                 output.appendChild(div);
                 scrollToBottom();
+                return div;
             }
 
-            function appendOutput(text, className = 'output-line') {
-                appendLine(text, className);
+            function appendOutput(html, className = 'output-line') {
+                return appendLine(html, className);
             }
 
             function appendPrompt(cmd) {
-                appendLine(`<span class="prompt-symbol">$</span> ${cmd}`, 'prompt-line');
+                appendLine(`<span class="prompt-symbol">$</span> ${escapeHtml(cmd)}`, 'prompt-line');
             }
 
-            // ── sticky header (always visible) ──
-            function buildStickyHeader() {
-                const header = document.createElement('div');
-                header.className = 'sticky-header';
-                header.id = 'sticky-header';
-                header.innerHTML = `
-                    <div class="title">P74 <span>Tools</span></div>
-                    <div class="cmd-grid">
-                        <a href="matrix.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">matrix</span>
-                            <span class="cmd-desc">polylingual matrix rain</span>
-                        </a>
-                        <a href="datetime.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">datetime</span>
-                            <span class="cmd-desc">decimal clock</span>
-                        </a>
-                        <a href="datetime-converter.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">time-converter</span>
-                            <span class="cmd-desc">time converter</span>
-                        </a>
-                        <a href="duodecimal.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">duodecimal</span>
-                            <span class="cmd-desc">duodecimal converter</span>
-                        </a>
-                        <a href="chronograph.html">
-                            <span class="prompt-symbol">$</span>
-                            <span class="cmd-name">chronograph</span>
-                            <span class="cmd-desc">chronograph</span>
-                        </a>
-                    </div>
-                    <div class="hint">Type <span style="color:var(--prompt)">help</span> for all commands · <span style="color:var(--prompt)">clear</span> to clear screen</div>
-                `;
-                return header;
+            // ── welcome message ──
+            function showWelcome() {
+                appendLine('01001010 Tools');
+                appendLine('By <a href="https://p74.ir" target="_blank" rel="noopener noreferrer">Pouyan</a>');
+                appendLine('');
+                appendLine('Enter <span class="hl">help</span> for all commands');
+                appendLine('');
             }
 
-            function renderStickyHeader() {
-                const old = document.getElementById('sticky-header');
-                if (old) old.remove();
-                const header = buildStickyHeader();
-                output.prepend(header);
+            // Like a real terminal, clearing wipes everything, welcome included.
+            function clearScreen() {
+                output.innerHTML = '';
                 scrollToBottom();
             }
+
+            // ── exit (the `exit` command and the red button) ──
+            function exitTerminal() {
+                appendOutput('→ closing tab …', 'output-line dim');
+                setTimeout(() => {
+                    // window.close() does not throw when the browser
+                    // refuses (tab not opened by a script), it just
+                    // does nothing – so check whether we're still here.
+                    try {
+                        window.close();
+                    } catch (_) {}
+                    setTimeout(() => {
+                        if (!window.closed) {
+                            appendOutput('⚠️  Cannot close tab programmatically. Please close it manually (Ctrl+W / Cmd+W).',
+                                'output-line error');
+                        }
+                    }, 200);
+                }, 200);
+            }
+
+            document.getElementById('close-btn').addEventListener('click', exitTerminal);
+
+            // ── navigation commands ──
+            // A Map (not a plain object): looking up "constructor", "toString"
+            // etc. in an object literal finds inherited members and would
+            // open a function instead of printing "command not found".
+            const NAV_COMMANDS = new Map([
+                ['matrix', 'matrix.html'],
+                ['datetime', 'datetime.html'],
+                ['time-converter', 'datetime-converter.html'],
+                ['duodecimal', 'duodecimal.html'],
+                ['chronograph', 'chronograph.html'],
+                ['watch', 'watch.html']
+            ]);
+
+            // Pages open in a new tab, so the terminal stays where it is.
+            function openPage(name, url) {
+                const w = window.open(url, '_blank');
+                if (w) {
+                    try { w.opener = null; } catch (_) {}
+                    appendOutput(`→ opening ${name} in a new tab …`, 'output-line dim');
+                } else {
+                    // the browser blocked the popup: offer a plain link instead
+                    appendOutput(`⚠️  Popup blocked. <a href="${url}" target="_blank" rel="noopener noreferrer">Open ${name}</a>`,
+                        'output-line error');
+                }
+            }
+
+            // ── help ──
+            // [command, description, is one of the apps]
+            const HELP_ITEMS = [
+                ['matrix',         'Polylingual Matrix',   true],
+                ['datetime',       'Decimal Clock',        true],
+                ['time-converter', 'Time Converter',       true],
+                ['duodecimal',     'Duodecimal Converter', true],
+                ['chronograph',    'Chronograph',          true],
+                ['watch',          'My dream wristwatch',  true],
+                ['cat',            'Concatenate files',    false],
+                ['man',            'Reference manuals',    false],
+                ['touch',          'File timestamp mod',   false],
+                ['uname',          'Print system name',    false],
+                ['whoami',         'Print current user',   false],
+                ['clear',          'Clear the terminal',   false],
+                ['clr',            'Alias for clear',      false],
+                ['exit',           'Close the tab',        false],
+                ['help',           'Show this help',       false],
+                ['pwd',            'Print working dir',    false],
+                ['ls',             'List dir contents',    false],
+                ['cd',             'Change dir',           false]
+            ];
+
+            // everything the autocomplete may suggest
+            const COMMANDS = HELP_ITEMS.map(item => item[0]);
+
+            function showHelp() {
+                appendOutput('', '');
+                appendOutput('Available commands:', 'output-line help');
+                HELP_ITEMS.forEach(([name, desc, isApp]) => {
+                    const row = appendOutput(
+                        `  <span class="cmd-name">${name}</span>${' '.repeat(Math.max(1, 18 - name.length))}<span class="cmd-desc">${desc}</span>`,
+                        'output-line help' + (isApp ? ' app' : ''));
+                    row.dataset.cmd = name;
+                    row.title = 'Click to type "' + name + '"';
+                });
+                appendOutput('', '');
+            }
+
+            // Clicking a help entry types the command into the prompt (it is not
+            // run – press Enter for that).
+            output.addEventListener('click', function(e) {
+                const row = e.target.closest('[data-cmd]');
+                if (!row) return;
+                setInput(row.dataset.cmd);
+            });
 
             // ── command logic ──
             function processCommand(cmd) {
@@ -561,7 +691,6 @@
 
                 const lower = trimmed.toLowerCase();
 
-                // ---- new commands ----
                 // cat (alone or with arguments)
                 if (lower === 'cat' || lower.startsWith('cat ')) {
                     appendOutput('Meow', 'output-line');
@@ -586,119 +715,34 @@
                     return;
                 }
 
-                // man (alone or with argument)
-                if (lower === 'man' || lower.startsWith('man ')) {
-                    let arg = '';
-                    if (lower === 'man') {
-                        arg = '';
-                    } else {
-                        // extract the argument after the space (preserve original case)
-                        const spaceIndex = trimmed.indexOf(' ');
-                        if (spaceIndex !== -1) {
-                            arg = trimmed.substring(spaceIndex + 1);
-                        } else {
-                            // fallback (should not happen)
-                            arg = '';
-                        }
-                    }
-                    appendOutput(`= woman${arg ? ' ' + arg : ''}`, 'output-line');
-                    return;
-                }
-				
-				// woman (alone or with argument)
-                if (lower === 'woman' || lower.startsWith('woman ')) {
-                    let arg = '';
-                    if (lower === 'woman') {
-                        arg = '';
-                    } else {
-                        // extract the argument after the space (preserve original case)
-                        const spaceIndex = trimmed.indexOf(' ');
-                        if (spaceIndex !== -1) {
-                            arg = trimmed.substring(spaceIndex + 1);
-                        } else {
-                            // fallback (should not happen)
-                            arg = '';
-                        }
-                    }
-                    appendOutput(`= man${arg ? ' ' + arg : ''}`, 'output-line');
+                // man / woman (alone or with an argument): each points at the other
+                const manMatch = /^(man|woman)(?:\s+(.+))?$/i.exec(trimmed);
+                if (manMatch) {
+                    const other = manMatch[1].toLowerCase() === 'man' ? 'woman' : 'man';
+                    const arg = manMatch[2] ? ' ' + escapeHtml(manMatch[2]) : '';
+                    appendOutput(`= ${other}${arg}`, 'output-line');
                     return;
                 }
 
-                // Navigation commands – redirect immediately
-                const navCommands = {
-                    'matrix': 'matrix.html',
-                    'datetime': 'datetime.html',
-                    'time-converter': 'datetime-converter.html',
-                    'duodecimal': 'duodecimal.html',
-                    'chronograph': 'chronograph.html',
-                };
-
-                if (navCommands[lower]) {
-                    window.location.href = navCommands[lower];
+                // Navigation commands – open in a new tab
+                if (NAV_COMMANDS.has(lower)) {
+                    openPage(lower, NAV_COMMANDS.get(lower));
                     return;
                 }
 
                 // System / easter egg commands
                 switch (lower) {
                     case 'exit':
-                        appendOutput('→ closing tab …', 'output-line dim');
-                        setTimeout(() => {
-                            try {
-                                window.close();
-                            } catch (_) {
-                                appendOutput('⚠️  Cannot close tab programmatically. Please close it manually (Ctrl+W / Cmd+W).',
-                                    'output-line error');
-                            }
-                        }, 200);
+                        exitTerminal();
                         break;
 
                     case 'help':
-                        appendOutput('', '');
-                        appendOutput('Available commands:', 'output-line help');
-                        appendOutput('  <span class="cmd-name">matrix</span>            <span class="cmd-desc">Polylingual Matrix Rain</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">datetime</span>          <span class="cmd-desc">Decimal Clock</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">time-converter</span>    <span class="cmd-desc">Time Converter</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">duodecimal</span>        <span class="cmd-desc">Duodecimal Converter</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">chronograph</span>       <span class="cmd-desc">Chronograph</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">cat</span>               <span class="cmd-desc">Concatenate files</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">man</span>               <span class="cmd-desc">Reference manuals</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">touch</span>             <span class="cmd-desc">Change file timestamps</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">uname</span>             <span class="cmd-desc">Print system name</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">whoami</span>            <span class="cmd-desc">Print current user</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">clear</span>             <span class="cmd-desc">Clear the terminal screen</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">exit</span>              <span class="cmd-desc">Close the tab</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">help</span>              <span class="cmd-desc">Show this help</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">pwd</span>               <span class="cmd-desc">Print working directory</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">ls</span>                <span class="cmd-desc">List directory contents</span>',
-                            'output-line help');
-                        appendOutput('  <span class="cmd-name">cd</span>                <span class="cmd-desc">Change directory</span>',
-                            'output-line help');
-                        appendOutput('', '');
+                        showHelp();
                         break;
 
                     case 'clear':
-                        const header = document.getElementById('sticky-header');
-                        output.innerHTML = '';
-                        if (header) {
-                            output.appendChild(header);
-                        } else {
-                            renderStickyHeader();
-                        }
-                        scrollToBottom();
+                    case 'clr':
+                        clearScreen();
                         break;
 
                     case 'pwd':
@@ -706,35 +750,66 @@
                         break;
 
                     case 'ls':
-                        appendOutput('permission denied', 'output-line error');
-                        break;
-
                     case 'cd':
                         appendOutput('permission denied', 'output-line error');
                         break;
 
                     default:
-                        appendOutput(`"${trimmed}": command not found`, 'output-line error');
+                        appendOutput(`"${escapeHtml(trimmed)}": command not found`, 'output-line error');
                         break;
                 }
             }
 
+            // ── autocomplete ──
+            // The first word is completed from COMMANDS. The suggestion is shown
+            // dimmed after the cursor; Tab types it in full.
+            function getSuggestion() {
+                const v = input.value;
+                if (!v || /\s/.test(v)) return '';
+                if (input.selectionStart !== v.length || input.selectionEnd !== v.length) return '';
+                const lv = v.toLowerCase();
+                return COMMANDS.find(c => c !== lv && c.startsWith(lv)) || '';
+            }
+
+            function updateGhost() {
+                const v = input.value;
+                const s = getSuggestion();
+                // no ghost when the text is wider than the box (input is scrolled)
+                if (!s || input.scrollWidth > input.clientWidth) {
+                    ghostTyped.textContent = '';
+                    ghostRest.textContent = '';
+                    return;
+                }
+                ghostTyped.textContent = v;
+                ghostRest.textContent = s.slice(v.length);
+            }
+
+            // Put text in the prompt, caret at the end, ready to be executed.
+            function setInput(text) {
+                input.value = text;
+                input.focus({ preventScroll: true });
+                const end = input.value.length;
+                input.setSelectionRange(end, end);
+                updateGhost();
+            }
+
+            input.addEventListener('input', updateGhost);
+            document.addEventListener('selectionchange', function() {
+                if (document.activeElement === input) updateGhost();
+            });
+
             // ── input handling ──
             function handleSubmit() {
                 const cmd = input.value;
-                if (cmd === undefined || cmd === null) return;
 
-                const trimmed = cmd.trim();
-                if (trimmed !== '') {
-                    history.push(cmd);
-                    historyIndex = history.length;
-                } else {
-                    historyIndex = history.length;
+                if (cmd.trim() !== '') {
+                    cmdHistory.push(cmd);
                 }
 
                 input.value = '';
+                updateGhost();
                 processCommand(cmd);
-                historyIndex = history.length;
+                historyIndex = cmdHistory.length;
             }
 
             // ── keyboard events ──
@@ -745,74 +820,83 @@
                     return;
                 }
 
+                if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    const s = getSuggestion();
+                    if (s) {
+                        e.preventDefault();
+                        setInput(s);
+                    }
+                    return;
+                }
+
                 if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    if (history.length === 0) return;
+                    if (cmdHistory.length === 0) return;
                     if (historyIndex > 0) {
                         historyIndex--;
-                        input.value = history[historyIndex];
+                        input.value = cmdHistory[historyIndex];
                     }
+                    updateGhost();
                     setTimeout(() => {
                         input.selectionStart = input.selectionEnd = input.value.length;
+                        updateGhost();
                     }, 0);
                     return;
                 }
 
                 if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    if (history.length === 0) return;
-                    if (historyIndex < history.length - 1) {
+                    if (cmdHistory.length === 0) return;
+                    if (historyIndex < cmdHistory.length - 1) {
                         historyIndex++;
-                        input.value = history[historyIndex];
+                        input.value = cmdHistory[historyIndex];
                     } else {
-                        historyIndex = history.length;
+                        historyIndex = cmdHistory.length;
                         input.value = '';
                     }
+                    updateGhost();
                     setTimeout(() => {
                         input.selectionStart = input.selectionEnd = input.value.length;
+                        updateGhost();
                     }, 0);
                     return;
                 }
 
                 // Ctrl+L / Cmd+L → clear
-                if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
                     e.preventDefault();
-                    const header = document.getElementById('sticky-header');
-                    output.innerHTML = '';
-                    if (header) {
-                        output.appendChild(header);
-                    } else {
-                        renderStickyHeader();
-                    }
-                    scrollToBottom();
+                    clearScreen();
                 }
             });
 
             // ── focus management ──
-            document.querySelector('.terminal').addEventListener('click', function(e) {
-                if (e.target.tagName !== 'INPUT') {
-                    input.focus();
-                }
+            // Clicking the terminal puts the cursor in the prompt, like a real
+            // terminal – except on links (so they stay usable) and while text
+            // is being selected (so it can be copied). There is deliberately no
+            // blur handler: forcing focus back made Tab, text selection and
+            // dismissing the mobile keyboard impossible.
+            terminal.addEventListener('click', function(e) {
+                if (e.target.closest('a')) return;
+                const sel = window.getSelection();
+                if (sel && sel.toString() !== '') return;
+                input.focus({ preventScroll: true });
             });
 
-            input.addEventListener('blur', function() {
-                setTimeout(() => {
-                    if (document.activeElement !== input) {
-                        input.focus();
-                    }
-                }, 10);
-            });
+            // ── typing state (on phones: the keyboard is up) ──
+            function syncTyping() {
+                root.classList.toggle('typing', document.activeElement === input);
+            }
+            input.addEventListener('focus', syncTyping);
+            input.addEventListener('blur', syncTyping);
 
             // ── init ──
-            renderStickyHeader();
+            syncViewport();
+            syncTyping();
+            showWelcome();
 
             setTimeout(() => {
-                input.focus();
+                input.focus({ preventScroll: true });
             }, 100);
-
-            output.addEventListener('click', function() {
-                input.focus();
-            });
 
             console.log('⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯');
             console.log('  P74 Tools terminal active');
