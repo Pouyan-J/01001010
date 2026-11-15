@@ -69,3 +69,15 @@ input {
         font-size: 18px;
     }
 }
+
+/* converter inputs: same size */
+input {
+    box-sizing: border-box;
+    width: min(18rem, 100%);
+    height: 2.5rem;
+}
+
+input::placeholder {
+    color: gray;
+    opacity: 1;
+}
