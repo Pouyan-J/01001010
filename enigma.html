@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enigma I / M3 Simulator</title>
+  <meta name="description" content="Eine funktionierende Simulation der deutschen Chiffriermaschine Enigma I / M3: Walzen I bis VIII, Umkehrwalzen B und C, Ringstellung, Steckerbrett und Doppelschritt.">
+  <link rel="stylesheet" href="enigma/style/enigma.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-text">
+      <h1>Enigma I / M3</h1>
+      <p data-i18n="intro">Die Chiffriermaschine von Wehrmacht und Luftwaffe. Tippe auf deiner Tastatur oder klicke auf die Tasten. Jeder Tastendruck dreht die Walzen, bevor die Lampe aufleuchtet.</p>
+    </div>
+    <button type="button" id="btnLang" class="lang" lang="en" data-i18n="langSwitch" data-i18n-attr="title:langTitle">English</button>
+  </header>
+
+  <main class="layout">
+    <section class="case" aria-label="Enigma-Maschine" data-i18n-attr="aria-label:machineAria">
+
+      <div class="panel panel-rotors">
+        <div class="reflector">
+          <label for="reflector"><span data-i18n="reflector">Umkehrwalze</span><small data-i18n="reflectorHint"></small></label>
+          <select id="reflector"></select>
+        </div>
+        <div id="rotors" class="rotors"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span data-i18n="lampboard">Lampenfeld</span><small data-i18n="lampboardHint"></small></h2>
+        <div id="lampboard" class="board" aria-hidden="true"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span data-i18n="keyboard">Tastatur</span><small data-i18n="keyboardHint"></small></h2>
+        <div id="keyboard" class="board"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span data-i18n="plugboard">Steckerbrett</span><small data-i18n="plugboardHint"></small></h2>
+        <div id="plugboard" class="plugboard">
+          <div id="sockets" class="sockets"></div>
+          <svg id="cables" class="cables" aria-hidden="true"></svg>
+        </div>
+        <div class="plug-tools">
+          <label for="plugText" data-i18n="plugPairs">Steckverbindungen</label>
+          <input id="plugText" type="text" spellcheck="false" autocomplete="off" placeholder="AB CD EF">
+          <button type="button" id="plugClear" data-i18n="plugRemoveAll">Alle entfernen</button>
+        </div>
+        <p id="plugMsg" class="plug-msg" role="status">Klicke erst auf eine Buchse, dann auf eine zweite, um sie zu verbinden. Klicke auf eine belegte Buchse, um ihr Kabel zu entfernen.</p>
+      </div>
+
+    </section>
+
+    <aside class="tape" aria-label="Nachricht" data-i18n-attr="aria-label:messageAria">
+      <div class="sheet">
+        <label for="input" data-i18n="input">Eingabe</label>
+        <textarea id="input" rows="6" spellcheck="false" autocomplete="off" autocapitalize="characters"
+          placeholder="Hier tippen, auf deiner Tastatur oder mit den Tasten der Maschine"
+          data-i18n-attr="placeholder:inputPlaceholder"></textarea>
+
+        <div class="sheet-head">
+          <h2 data-i18n="output">Ausgabe</h2>
+          <span id="count">0 Buchstaben</span>
+        </div>
+        <div id="output" class="out" tabindex="0" aria-label="Ausgabetext"
+          data-placeholder="Der verschlüsselte Text erscheint hier"
+          data-i18n-attr="aria-label:outputAria;data-placeholder:outputEmpty"></div>
+
+        <div class="tools">
+          <button type="button" id="btnCopy" data-i18n="copy">Ausgabe kopieren</button>
+          <button type="button" id="btnSwap" data-i18n="swap" data-i18n-attr="title:swapTitle"
+            title="Ersetzt die Eingabe durch die Ausgabe. Mit denselben Einstellungen erhältst du die ursprüngliche Nachricht zurück.">Ausgabe als Eingabe verwenden</button>
+          <button type="button" id="btnClear" data-i18n="clear">Nachricht löschen</button>
+          <label class="check"><input type="checkbox" id="grouped" checked> <span data-i18n="groups">Fünfergruppen</span></label>
+        </div>
+      </div>
+
+      <div class="sheet sheet-settings">
+        <h2 data-i18n="settings">Maschineneinstellungen</h2>
+        <div class="tools">
+          <button type="button" id="btnRandom" data-i18n="random">Zufällig einstellen</button>
+          <button type="button" id="btnReset" data-i18n="reset">Auf Standard zurücksetzen</button>
+        </div>
+      </div>
+
+      <p class="hint" data-i18n="hint">Die Maschine ist reziprok. Verschlüssele eine Nachricht, kopiere die Ausgabe bei gleichen Einstellungen in die Eingabe, und der Originaltext kommt zurück. Leerzeichen und Satzzeichen werden verworfen, wie bei der echten Maschine.</p>
+    </aside>
+  </main>
+
+  <noscript><p class="noscript">Dieser Simulator benötigt JavaScript. / This simulator needs JavaScript.</p></noscript>
+
+  <script src="enigma/script/i18n.js"></script>
+  <script src="enigma/script/enigma.js"></script>
+  <script src="enigma/script/enigma.app.js"></script>
+</body>
+</html>
